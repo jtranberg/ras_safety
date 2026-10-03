@@ -741,3 +741,7 @@ button:focus-visible {
   border-color: #64748b;
   color: #fff;
 }
+
+.site-nav {
+  border-top: 6px solid #f97316;
+}

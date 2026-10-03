@@ -1,3 +1,5 @@
+# RAS Safety Authorization
+
 [![Demo](https://img.shields.io/badge/Demo-Open_App-2563EB?style=flat-square)](https://ras-safety-authorization.netlify.app/)
 ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -6,9 +8,6 @@
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
 ![Cloudflare R2](https://img.shields.io/badge/Cloudflare_R2-F38020?style=flat-square&logo=cloudflare&logoColor=white)
 
-
-# RAS Safety Authorization
-
 Built for the Ron Anderson & Sons Junior Software Developer technical assessment.
 
 Framers complete daily safety forms with photos. Administrators review submissions, authorize forms, and manage workers and job sites.
@@ -16,7 +15,9 @@ Framers complete daily safety forms with photos. Administrators review submissio
 ## Demo
 
 - [Live application](https://ras-safety-authorization.netlify.app/)
-  > Demo hosting: The API runs on Render’s free tier and may sleep when inactive. The first request can take a little longer while it starts up. Please allow a moment for the app to connect.
+
+> Demo hosting: The API runs on Render’s free tier and may sleep when inactive. The first request can take a little longer while it starts up. Please allow a moment for the app to connect.
+
 - [GitHub repository](https://github.com/jtranberg/ras_safety)
 - [Entity-Relationship Diagram](docs/RAS_ERD.png)
 
@@ -63,6 +64,8 @@ Worker identity comes from the authenticated account. The backend restricts work
 - Authorize forms or revoke authorization.
 - Add workers and explicitly set initial passwords.
 - Change passwords, revoke access, or delete worker accounts.
+- Set or change a password directly within the selected worker's card.
+- Prepare an email draft with the worker's login details after successful account creation or password reset.
 - Add job sites with an optional address.
 - Edit existing job-site names and addresses.
 
@@ -72,6 +75,8 @@ Worker identity comes from the authenticated account. The backend restricts work
 - Introductory splash displayed once per browser tab.
 - Session restoration after refresh.
 - Loading states and success/error messages.
+- Show/Hide controls for login, initial worker passwords, and password resets; passwords are masked by default.
+- RAS footer with website, phone, email, and Privacy Policy links, with responsive wrapping on mobile.
 - Public Privacy Policy available without signing in.
 - Cookie notice displayed after the splash screen.
 - Cookie notice dismissal remembered in browser storage.
@@ -102,7 +107,6 @@ NODE_ENV=development
 CLIENT_ORIGIN=http://localhost:5173
 MONGODB_URI=YOUR_MONGODB_CONNECTION_STRING
 SESSION_SECRET=YOUR_RANDOM_SECRET_AT_LEAST_64_CHARACTERS
-
 R2_ENDPOINT=https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
 R2_ACCESS_KEY_ID=YOUR_R2_ACCESS_KEY_ID
 R2_SECRET_ACCESS_KEY=YOUR_R2_SECRET_ACCESS_KEY
@@ -213,6 +217,14 @@ Backend authorization enforces:
 
 Photo uploads are limited to the worker's own forms with SUBMITTED status.
 
+### Worker Login Email Drafts
+
+After creating a worker or saving a new password, the worker's card displays **Password saved. Ready to send.** The **Email login details** button opens the Admin's configured email app with the worker's email address, application link, and newly saved password filled in.
+
+The Admin reviews the draft and clicks Send in their email app. Opening the draft does not send an email automatically, and the application does not confirm delivery.
+
+The newly entered password is retained temporarily in React state for this action. It is cleared after five minutes, when the Admin selects Clear, when another account action starts, or when the panel unmounts or the page reloads. It is not written to browser storage for this feature, and existing passwords cannot be retrieved from their stored hashes. Clearing it in the app does not remove a draft already opened in an email client.
+
 ## Photo Handling
 
 - Maximum five photos per submission.
@@ -230,11 +242,11 @@ Photo uploads are limited to the worker's own forms with SUBMITTED status.
 
 ### Data Model
 
-- **User:** credentials, role, account status, and session version.
-- **Site:** name, optional address, and active status.
-- **Submission:** worker/site references, work date, checklist, notes, status, authorization details, and embedded photo metadata.
-- **Checklist:** required embedded Boolean answers.
-- **Photo:** embedded identifier, R2 object key, original filename, content type, size, and timestamps.
+- \\User:\\ credentials, role, account status, and session version.
+- \\Site:\\ name, optional address, and active status.
+- \\Submission:\\ worker/site references, work date, checklist, notes, status, authorization details, and embedded photo metadata.
+- \\Checklist:\\ required embedded Boolean answers.
+- \\Photo:\\ embedded identifier, R2 object key, original filename, content type, size, and timestamps.
 
 One worker and one site can each have many submissions. Each submission contains one checklist and up to five photos through the upload API.
 
@@ -259,6 +271,8 @@ Photos are embedded documents, not a separate MongoDB collection. User and site 
 - Editing a site preserves its existing submission relationships.
 - After renaming a site, select Refresh dashboard to update filter options and summaries.
 - Dismissing the cookie notice does not disable the essential login session cookie.
+- Email login details uses a `mailto:` draft and requires a configured email app; the Admin sends it manually.
+- Password visibility resets when Admin password fields are cleared and after successful login or logout.
 
 ## Configuration
 
