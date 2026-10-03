@@ -22,6 +22,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [splashComplete, setSplashComplete] = useState(splashWasSeen);
   const [showPrivacy, setShowPrivacy] = useState(() => window.location.hash === "#privacy");
 
@@ -87,6 +88,7 @@ export default function App() {
         }),
       });
       setUser(result.user);
+      setShowLoginPassword(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reach the API.");
     } finally {
@@ -101,6 +103,7 @@ export default function App() {
     try {
       await api("/auth/logout", { method: "POST" });
       setUser(null);
+      setShowLoginPassword(false);
     } catch {
       setError("Logout failed. Please try again.");
     } finally {
@@ -169,8 +172,23 @@ export default function App() {
                 </label>
                 <label>
                   Password
-                  <input name="password" type="password" autoComplete="current-password" required disabled={busy} />
+                  <input
+                    name="password"
+                    type={showLoginPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    disabled={busy}
+                  />
                 </label>
+                <button
+                  type="button"
+                  className="secondary password-toggle"
+                  disabled={busy}
+                  aria-pressed={showLoginPassword}
+                  onClick={() => setShowLoginPassword((shown) => !shown)}
+                >
+                  {showLoginPassword ? "Hide password" : "Show password"}
+                </button>
                 <button className="primary" type="submit" disabled={busy}>
                   {busy ? "Signing in..." : "Sign in"}
                 </button>
@@ -184,24 +202,23 @@ export default function App() {
         </div>
       </main>
 
-     <footer className="ras-privacy-footer">
-  <div className="ras-footer-business">
-    <a
-      href="https://www.rasltd.ca/"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Ron Anderson &amp; Sons Ltd.
-    </a>
-    <span>   Langford, British Columbia</span>
-  </div>
-
-  <div className="ras-footer-links">
-    <a href="tel:+18447277279">1.844.727.7279 </a>
-    <a href="mailto:info@rasltd.ca">info@rasltd.ca </a>
-    <a href="#privacy">Privacy Policy</a>
-  </div>
-</footer>
+      <footer className="ras-privacy-footer">
+        <div className="ras-footer-business">
+          <a
+            href="https://www.rasltd.ca/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Ron Anderson &amp; Sons Ltd.
+          </a>
+          <span>Langford, British Columbia</span>
+        </div>
+        <div className="ras-footer-links">
+          <a href="tel:+18447277279">1.844.727.7279</a>
+          <a href="mailto:info@rasltd.ca">info@rasltd.ca</a>
+          <a href="#privacy">Privacy Policy</a>
+        </div>
+      </footer>
       <CookieNotice />
     </div>
   );
