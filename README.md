@@ -1,3 +1,12 @@
+[![Demo](https://img.shields.io/badge/Demo-Open_App-2563EB?style=flat-square)](https://ras-safety-authorization.netlify.app/)
+![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
+![Cloudflare R2](https://img.shields.io/badge/Cloudflare_R2-F38020?style=flat-square&logo=cloudflare&logoColor=white)
+
+
 # RAS Safety Authorization
 
 Built for the Ron Anderson & Sons Junior Software Developer technical assessment.
@@ -7,6 +16,7 @@ Framers complete daily safety forms with photos. Administrators review submissio
 ## Demo
 
 - [Live application](https://ras-safety-authorization.netlify.app/)
+  > Demo hosting: The API runs on Render’s free tier and may sleep when inactive. The first request can take a little longer while it starts up. Please allow a moment for the app to connect.
 - [GitHub repository](https://github.com/jtranberg/ras_safety)
 - [Entity-Relationship Diagram](docs/RAS_ERD.png)
 
@@ -14,10 +24,10 @@ Framers complete daily safety forms with photos. Administrators review submissio
 
 The demo uses fictional demonstration data.
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | admin@example.com | Adminpassword |
-| Framer | framer@example.com | DemoFramer |
+| Role   | Email              | Password      |
+| ------ | ------------------ | ------------- |
+| Admin  | admin@example.com  | Adminpassword |
+| Framer | framer@example.com | DemoFramer    |
 
 Worker accounts and passwords are explicitly created and set by an administrator in the Admin workspace. Worker passwords are not supplied by a seed script. To test the Framer workspace, use the Framer credentials above. Administrators can also create additional workers and set their passwords in the Admin workspace.
 
@@ -54,6 +64,7 @@ Worker identity comes from the authenticated account. The backend restricts work
 - Add workers and explicitly set initial passwords.
 - Change passwords, revoke access, or delete worker accounts.
 - Add job sites with an optional address.
+- Edit existing job-site names and addresses.
 
 ### User Experience
 
