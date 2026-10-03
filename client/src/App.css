@@ -721,3 +721,13 @@ button:focus-visible {
   display: block;
   margin: 0.5rem 0 1rem;
 }
+
+.add-worker-button {
+  margin-bottom: 1.25rem;
+}
+
+.add-worker-button:hover:not(:disabled) {
+  background-color: #64748b;
+  border-color: #64748b;
+  color: #fff;
+}

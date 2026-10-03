@@ -217,7 +217,7 @@ const [showPassword, setShowPassword] = useState(false);
       {message && <p role="status">{message}</p>}
       <button
         type="button"
-        className="primary"
+        className="primary add-worker-button"
         disabled={busy || loading}
         onClick={() => {
           setLoginDetails(null);
@@ -238,6 +238,7 @@ const [showPassword, setShowPassword] = useState(false);
           <label>
             Full name
             <input
+            
               type="text"
               autoComplete="off"
               value={newName}
