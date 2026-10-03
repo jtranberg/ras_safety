@@ -145,7 +145,7 @@ export default function App() {
               </button>
             </>
           ) : (
-            <span className="nav-role">Crew sign in</span>
+            <span className="nav-role">Crew Sign In</span>
           )}
         </nav>
       </header>
