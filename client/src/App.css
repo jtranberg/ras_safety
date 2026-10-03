@@ -731,3 +731,13 @@ button:focus-visible {
   border-color: #64748b;
   color: #fff;
 }
+
+.add-site-button {
+  margin-bottom: 1.25rem;
+}
+
+.add-site-button:hover:not(:disabled) {
+  background-color: #64748b;
+  border-color: #64748b;
+  color: #fff;
+}

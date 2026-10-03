@@ -117,7 +117,7 @@ export default function SiteManagementPanel() {
 
       <button
         type="button"
-        className="primary"
+        className="primary add-site-button"
         disabled={busy || loading || formOpen}
         onClick={() => {
           setAdding(true);
