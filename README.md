@@ -61,6 +61,9 @@ Worker identity comes from the authenticated account. The backend restricts work
 - Introductory splash displayed once per browser tab.
 - Session restoration after refresh.
 - Loading states and success/error messages.
+- Public Privacy Policy available without signing in.
+- Cookie notice displayed after the splash screen.
+- Cookie notice dismissal remembered in browser storage.
 
 ## Local Setup
 
@@ -242,6 +245,9 @@ Photos are embedded documents, not a separate MongoDB collection. User and site 
 - Filters take effect when Apply filters is selected.
 - Refresh dashboard reloads submissions and filter options.
 - AI tools assisted development; code understanding is part of the assessment.
+- Editing a site preserves its existing submission relationships.
+- After renaming a site, select Refresh dashboard to update filter options and summaries.
+- Dismissing the cookie notice does not disable the essential login session cookie.
 
 ## Configuration
 
