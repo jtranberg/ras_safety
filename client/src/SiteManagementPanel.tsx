@@ -12,11 +12,15 @@ export default function SiteManagementPanel() {
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  const formOpen = adding || editingId !== null;
+  const editing = editingId !== null;
 
   useEffect(() => {
     let active = true;
@@ -27,9 +31,7 @@ export default function SiteManagementPanel() {
         if (active) setSites(result.sites);
       } catch (err) {
         if (active) {
-          setError(
-            err instanceof ApiError ? err.message : "Could not load sites."
-          );
+          setError(err instanceof ApiError ? err.message : "Could not load sites.");
         }
       } finally {
         if (active) setLoading(false);
@@ -37,42 +39,65 @@ export default function SiteManagementPanel() {
     }
 
     void load();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
-  async function addSite(event: FormEvent<HTMLFormElement>) {
+  function closeForm() {
+    setAdding(false);
+    setEditingId(null);
+    setName("");
+    setAddress("");
+    setError("");
+  }
+
+  function startEdit(site: Site) {
+    if (busy || formOpen) return;
+    setAdding(false);
+    setEditingId(site._id);
+    setName(site.name);
+    setAddress(site.address ?? "");
+    setError("");
+    setMessage("");
+  }
+
+  async function saveSite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+
+    const trimmedName = name.trim();
+    const trimmedAddress = address.trim();
+    if (!trimmedName) {
+      setError("Site name is required.");
+      return;
+    }
 
     setBusy(true);
     setError("");
     setMessage("");
 
     try {
-      const result = await api<{ site: Site }>("/sites", {
-        method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          address: address.trim(),
-        }),
-      });
-
-      setSites((previous) =>
-        [...previous, result.site].sort((a, b) =>
-          a.name.localeCompare(b.name)
-        )
+      const result = await api<{ site: Site }>(
+        editingId ? `/sites/${encodeURIComponent(editingId)}` : "/sites",
+        {
+          method: editingId ? "PATCH" : "POST",
+          body: JSON.stringify({ name: trimmedName, address: trimmedAddress }),
+        }
       );
 
-      setName("");
-      setAddress("");
-      setAdding(false);
-      setMessage(`${result.site.name} added.`);
+      setSites((previous) => {
+        const updated = editingId
+          ? previous.map((site) => site._id === editingId ? result.site : site)
+          : [...previous, result.site];
+        return updated.sort((a, b) => a.name.localeCompare(b.name));
+      });
+
+      setMessage(`${result.site.name} ${editingId ? "updated" : "added"}.`);
+      closeForm();
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Could not add site."
+        err instanceof ApiError
+          ? err.message
+          : editingId ? "Could not update site." : "Could not add site."
       );
     } finally {
       setBusy(false);
@@ -84,7 +109,7 @@ export default function SiteManagementPanel() {
       <span className="eyebrow">ADMIN CONTROLS</span>
       <h2>Job sites</h2>
       <p className="muted">
-        Add job sites for workers to select when completing safety forms.
+        Add job sites or update an existing site's name and address.
       </p>
 
       {error && <p className="error" role="alert">{error}</p>}
@@ -93,9 +118,12 @@ export default function SiteManagementPanel() {
       <button
         type="button"
         className="primary"
-        disabled={busy || loading}
+        disabled={busy || loading || formOpen}
         onClick={() => {
           setAdding(true);
+          setEditingId(null);
+          setName("");
+          setAddress("");
           setError("");
           setMessage("");
         }}
@@ -103,10 +131,9 @@ export default function SiteManagementPanel() {
         Add site
       </button>
 
-      {adding && (
-        <form onSubmit={addSite}>
-          <h3>Add job site</h3>
-
+      {formOpen && (
+        <form onSubmit={saveSite}>
+          <h3>{editing ? "Edit job site" : "Add job site"}</h3>
           <label>
             Site name
             <input
@@ -116,9 +143,9 @@ export default function SiteManagementPanel() {
               maxLength={120}
               required
               disabled={busy}
+              autoFocus
             />
           </label>
-
           <label>
             Address (optional)
             <input
@@ -129,22 +156,13 @@ export default function SiteManagementPanel() {
               disabled={busy}
             />
           </label>
-
           <div className="submission-actions">
             <button type="submit" className="primary" disabled={busy}>
-              {busy ? "Adding..." : "Create site"}
+              {busy
+                ? editing ? "Saving..." : "Adding..."
+                : editing ? "Save changes" : "Create site"}
             </button>
-
-            <button
-              type="button"
-              className="secondary"
-              disabled={busy}
-              onClick={() => {
-                setAdding(false);
-                setName("");
-                setAddress("");
-              }}
-            >
+            <button type="button" className="secondary" disabled={busy} onClick={closeForm}>
               Cancel
             </button>
           </div>
@@ -162,6 +180,17 @@ export default function SiteManagementPanel() {
               <div>
                 <strong>{site.name}</strong>
                 <p>{site.address || "No address provided."}</p>
+              </div>
+              <div className="submission-actions">
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy || formOpen}
+                  onClick={() => startEdit(site)}
+                  aria-label={`Edit ${site.name}`}
+                >
+                  Edit site
+                </button>
               </div>
             </article>
           ))}

@@ -366,4 +366,67 @@ router.patch(
   },
 );
 
+// Update the existing site without changing submission references.
+router.patch("/sites/:id", requireRole("ADMIN"), async (req, res, next) => {
+  try {
+    if (!mongoose.isObjectIdOrHexString(req.params.id)) {
+      return res.status(400).json({ message: "Invalid site ID." });
+    }
+
+    const { name, address = "" } = req.body ?? {};
+
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      name.trim().length > 120 ||
+      typeof address !== "string" ||
+      address.trim().length > 300
+    ) {
+      return res.status(400).json({
+        message:
+          "Enter a site name (maximum 120 characters) and an optional address (maximum 300 characters).",
+      });
+    }
+
+    const site = await Site.findOneAndUpdate(
+      { _id: req.params.id, active: true },
+      {
+        $set: {
+          name: name.trim(),
+          address: address.trim(),
+        },
+      },
+      { returnDocument: "after", runValidators: true }
+    );
+
+    if (!site) {
+      return res.status(404).json({
+        message: "Site not found or unavailable.",
+      });
+    }
+
+    res.json({
+      site: {
+        _id: String(site._id),
+        name: site.name,
+        address: site.address,
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "A site with that name already exists.",
+      });
+    }
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        message: "Enter valid site details.",
+      });
+    }
+
+    next(error);
+  }
+});
+
 export default router;
