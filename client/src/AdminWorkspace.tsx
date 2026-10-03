@@ -114,9 +114,8 @@ async function fetchDashboard(filters: Filters) {
 function StatusBadge({ status }: { status: Submission["status"] }) {
   return (
     <span
-      className={`badge ${
-        status === "AUTHORIZED" ? "badge-authorized" : ""
-      }`}
+      className={`badge ${status === "AUTHORIZED" ? "badge-authorized" : ""
+        }`}
     >
       {status === "AUTHORIZED"
         ? "Authorized"
@@ -555,7 +554,12 @@ export default function AdminWorkspace() {
                   No submissions match the applied filters.
                 </div>
               ) : (
-                <div className="submission-list">
+                <div
+                  className="submission-list admin-submission-list"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Safety submissions"
+                >
                   {submissions.map((submission) => (
                     <article
                       className="submission"

@@ -745,3 +745,11 @@ button:focus-visible {
 .site-nav {
   border-top: 6px solid #f97316;
 }
+.admin-submission-list {
+  max-height: 65vh;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: #64748b #e5e7eb;
+}

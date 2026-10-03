@@ -250,7 +250,12 @@ export default function WorkerWorkspace({ user }: { user: User }) {
         {submissions.length === 0 ? (
           <div className="empty">No submissions yet.</div>
         ) : (
-          <div className="submission-list">
+          <div
+            className="submission-list worker-submission-list"
+            tabIndex={0}
+            role="region"
+            aria-label="Your safety submissions"
+          >
             {submissions.map((submission) => (
               <div className="card" key={submission._id}>
                 <article className="submission">
@@ -262,11 +267,10 @@ export default function WorkerWorkspace({ user }: { user: User }) {
                   </div>
 
                   <span
-                    className={`badge ${
-                      submission.status === "AUTHORIZED"
+                    className={`badge ${submission.status === "AUTHORIZED"
                         ? "badge-authorized"
                         : ""
-                    }`}
+                      }`}
                   >
                     {submission.status === "AUTHORIZED"
                       ? "Authorized"
