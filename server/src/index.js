@@ -16,12 +16,19 @@ const port = Number(process.env.PORT || 3000);
 
 app.use(helmet());
 
-const clientOrigin =
-  process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const allowedOrigins = new Set([
+  "http://localhost:5173",
+  "https://ras-safety-authorization.netlify.app",
+  ...(process.env.CLIENT_ORIGIN
+    ? [process.env.CLIENT_ORIGIN.replace(/\/$/, "")]
+    : []),
+]);
 
 app.use(
   cors({
-    origin: clientOrigin,
+    origin(origin, callback) {
+      callback(null, Boolean(origin && allowedOrigins.has(origin)));
+    },
     credentials: true,
   })
 );
@@ -45,7 +52,7 @@ app.use("/api", (req, res, next) => {
     return next();
   }
 
-  if (req.get("origin") !== clientOrigin) {
+  if (!allowedOrigins.has(req.get("origin"))) {
     return res.status(403).json({
       message: "Request origin not allowed.",
     });
