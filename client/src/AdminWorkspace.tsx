@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { api, ApiError } from "./api";
 import PhotoPanel from "./PhotoPanel";
 import WorkerAccessPanel from "./WorkerAccessPanel";
-
 import SiteManagementPanel from "./SiteManagementPanel";
 
 const checks = [
@@ -30,17 +30,93 @@ type Submission = {
   revokedAt?: string | null;
 };
 
+type SiteOption = {
+  _id: string;
+  name: string;
+};
+
+type WorkerOption = {
+  id: string;
+  name: string;
+};
+
+type Summary = {
+  total: number;
+  authorized: number;
+  awaitingAuthorization: number;
+  sites: {
+    siteId: string;
+    name: string;
+    total: number;
+    authorized: number;
+  }[];
+};
+
+type Filters = {
+  siteId: string;
+  workerId: string;
+  from: string;
+  to: string;
+};
+
+const emptyFilters: Filters = {
+  siteId: "",
+  workerId: "",
+  from: "",
+  to: "",
+};
+
+const emptySummary: Summary = {
+  total: 0,
+  authorized: 0,
+  awaitingAuthorization: 0,
+  sites: [],
+};
+
 function errorMessage(error: unknown) {
   return error instanceof ApiError
     ? error.message
-    : "Could not reach the API.";
+    : error instanceof Error
+      ? error.message
+      : "Could not reach the API.";
+}
+
+async function fetchDashboard(filters: Filters) {
+  const query = new URLSearchParams();
+
+  if (filters.siteId) query.set("siteId", filters.siteId);
+  if (filters.workerId) query.set("workerId", filters.workerId);
+  if (filters.from) query.set("from", filters.from);
+  if (filters.to) query.set("to", filters.to);
+
+  const [result, sitesResult, workersResult] = await Promise.all([
+    api<{ submissions: Submission[]; summary: Summary }>(
+      `/submissions?${query.toString()}`
+    ),
+    api<{ sites: SiteOption[] }>("/sites"),
+    api<{ workers: WorkerOption[] }>("/auth/workers"),
+  ]);
+
+  if (!result.summary) {
+    throw new Error(
+      "The API is missing summary data. Update the GET /submissions route."
+    );
+  }
+
+  return {
+    submissions: result.submissions,
+    summary: result.summary,
+    sites: sitesResult.sites,
+    workers: workersResult.workers,
+  };
 }
 
 function StatusBadge({ status }: { status: Submission["status"] }) {
   return (
     <span
-      className={`badge ${status === "AUTHORIZED" ? "badge-authorized" : ""
-        }`}
+      className={`badge ${
+        status === "AUTHORIZED" ? "badge-authorized" : ""
+      }`}
     >
       {status === "AUTHORIZED"
         ? "Authorized"
@@ -61,18 +137,42 @@ export default function AdminWorkspace() {
     "authorize" | "revoke" | null
   >(null);
 
-  const saving = pendingAction !== null;
+  const [siteOptions, setSiteOptions] = useState<SiteOption[]>([]);
+  const [workerOptions, setWorkerOptions] = useState<WorkerOption[]>([]);
+  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [appliedFilters, setAppliedFilters] =
+    useState<Filters>(emptyFilters);
+  const [summary, setSummary] = useState<Summary>(emptySummary);
 
+  const saving = pendingAction !== null;
+  const controlsBusy = loading || opening || saving;
+
+  // Validation is derived from the input values, not stored by an effect.
+  const filterError =
+    filters.from && filters.to && filters.from > filters.to
+      ? "The start date must be on or before the end date."
+      : "";
+
+  const filtersChanged =
+    filters.siteId !== appliedFilters.siteId ||
+    filters.workerId !== appliedFilters.workerId ||
+    filters.from !== appliedFilters.from ||
+    filters.to !== appliedFilters.to;
+
+  // Initial loading only updates state after the API request completes.
   useEffect(() => {
     let active = true;
 
-    async function load() {
+    async function loadInitialDashboard() {
       try {
-        const result = await api<{ submissions: Submission[] }>(
-          "/submissions"
-        );
+        const result = await fetchDashboard(emptyFilters);
 
-        if (active) setSubmissions(result.submissions);
+        if (active) {
+          setSubmissions(result.submissions);
+          setSummary(result.summary);
+          setSiteOptions(result.sites);
+          setWorkerOptions(result.workers);
+        }
       } catch (err) {
         if (active) setError(errorMessage(err));
       } finally {
@@ -80,17 +180,52 @@ export default function AdminWorkspace() {
       }
     }
 
-    void load();
+    void loadInitialDashboard();
 
     return () => {
       active = false;
     };
   }, []);
 
+  async function loadDashboard(nextFilters: Filters) {
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await fetchDashboard(nextFilters);
+
+      setSubmissions(result.submissions);
+      setSummary(result.summary);
+      setSiteOptions(result.sites);
+      setWorkerOptions(result.workers);
+      setAppliedFilters({ ...nextFilters });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (controlsBusy || filterError) return;
+
+    void loadDashboard({ ...filters });
+  }
+
+  function clearFilters() {
+    if (controlsBusy) return;
+
+    setFilters({ ...emptyFilters });
+    void loadDashboard({ ...emptyFilters });
+  }
+
   async function openSubmission(id: string) {
+    if (controlsBusy) return;
+
     setOpening(true);
     setError("");
-    setSelected(null);
 
     try {
       const result = await api<{ submission: Submission }>(
@@ -126,6 +261,9 @@ export default function AdminWorkspace() {
             : submission
         )
       );
+
+      // Reload matching records and summary after authorization changes.
+      await loadDashboard(appliedFilters);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -140,16 +278,18 @@ export default function AdminWorkspace() {
           {error}
         </p>
       )}
+
       {!selected && (
-  <>
-    <WorkerAccessPanel />
-    <SiteManagementPanel />
-  </>
-)}
+        <>
+          <WorkerAccessPanel />
+          <SiteManagementPanel />
+        </>
+      )}
 
       {selected ? (
         <section className="card">
           <button
+            type="button"
             className="secondary"
             onClick={() => {
               setSelected(null);
@@ -173,8 +313,9 @@ export default function AdminWorkspace() {
 
             {selected.status === "AUTHORIZED" ? (
               <button
+                type="button"
                 className="secondary revoke-button"
-                onClick={() => changeAuthorization("revoke")}
+                onClick={() => void changeAuthorization("revoke")}
                 disabled={saving}
               >
                 {pendingAction === "revoke"
@@ -183,8 +324,9 @@ export default function AdminWorkspace() {
               </button>
             ) : (
               <button
+                type="button"
                 className="primary"
-                onClick={() => changeAuthorization("authorize")}
+                onClick={() => void changeAuthorization("authorize")}
                 disabled={saving}
               >
                 {pendingAction === "authorize"
@@ -203,15 +345,14 @@ export default function AdminWorkspace() {
                 </p>
               )}
 
-            {selected.status !== "AUTHORIZED" &&
-              selected.revokedAt && (
-                <p className="muted">
-                  Authorization revoked by{" "}
-                  {selected.revokedBy?.name ?? "Admin"} on{" "}
-                  {new Date(selected.revokedAt).toLocaleString()}.
-                  {" "}This form is awaiting authorization.
-                </p>
-              )}
+            {selected.status !== "AUTHORIZED" && selected.revokedAt && (
+              <p className="muted">
+                Authorization revoked by{" "}
+                {selected.revokedBy?.name ?? "Admin"} on{" "}
+                {new Date(selected.revokedAt).toLocaleString()}.
+                {" "}This form is awaiting authorization.
+              </p>
+            )}
           </div>
 
           <dl className="review-list">
@@ -233,7 +374,12 @@ export default function AdminWorkspace() {
           <p className="submission-notes">
             {selected.notes || "No notes provided."}
           </p>
-          <PhotoPanel key={selected._id} submissionId={selected._id} />
+
+          <PhotoPanel
+            key={selected._id}
+            submissionId={selected._id}
+          />
+
           <p className="muted">
             Submitted: {new Date(selected.createdAt).toLocaleString()}
           </p>
@@ -242,46 +388,206 @@ export default function AdminWorkspace() {
         <section className="card">
           <span className="eyebrow">CREW OVERVIEW</span>
           <h2>Safety submissions</h2>
+
           <p className="muted">
-            Latest 100 submissions across all sites.
+            Filter by site, worker, and work date. Showing up to 100
+            matching submissions; summary totals include all matches.
           </p>
+
+          <form onSubmit={applyFilters}>
+            <div className="admin-filters">
+              <label>
+                Site
+                <select
+                  value={filters.siteId}
+                  disabled={controlsBusy}
+                  onChange={(event) =>
+                    setFilters({
+                      ...filters,
+                      siteId: event.target.value,
+                    })
+                  }
+                >
+                  <option value="">All sites</option>
+                  {siteOptions.map((site) => (
+                    <option key={site._id} value={site._id}>
+                      {site.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Worker
+                <select
+                  value={filters.workerId}
+                  disabled={controlsBusy}
+                  onChange={(event) =>
+                    setFilters({
+                      ...filters,
+                      workerId: event.target.value,
+                    })
+                  }
+                >
+                  <option value="">All workers</option>
+                  {workerOptions.map((worker) => (
+                    <option key={worker.id} value={worker.id}>
+                      {worker.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                From
+                <input
+                  type="date"
+                  value={filters.from}
+                  disabled={controlsBusy}
+                  onChange={(event) =>
+                    setFilters({
+                      ...filters,
+                      from: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label>
+                To
+                <input
+                  type="date"
+                  value={filters.to}
+                  disabled={controlsBusy}
+                  onChange={(event) =>
+                    setFilters({
+                      ...filters,
+                      to: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="submission-actions">
+              <button
+                type="submit"
+                className="primary"
+                disabled={controlsBusy || Boolean(filterError)}
+              >
+                Apply filters
+              </button>
+
+              <button
+                type="button"
+                className="secondary"
+                disabled={controlsBusy}
+                onClick={clearFilters}
+              >
+                Clear filters
+              </button>
+
+              <button
+                type="button"
+                className="secondary"
+                disabled={controlsBusy}
+                onClick={() => void loadDashboard(appliedFilters)}
+              >
+                Refresh dashboard
+              </button>
+            </div>
+
+            {filterError && (
+              <p className="error" role="alert">
+                {filterError}
+              </p>
+            )}
+
+            {filtersChanged && !filterError && (
+              <p className="muted">
+                Select Apply filters to update the results and summary.
+              </p>
+            )}
+          </form>
 
           {loading || opening ? (
             <p role="status">
               {opening
                 ? "Opening submission..."
-                : "Loading submissions..."}
+                : "Loading dashboard..."}
             </p>
-          ) : submissions.length === 0 ? (
-            <div className="empty">No submissions yet.</div>
           ) : (
-            <div className="submission-list">
-              {submissions.map((submission) => (
-                <article className="submission" key={submission._id}>
-                  <div>
-                    <strong>
-                      {submission.worker?.name ?? "Unavailable worker"}
-                    </strong>
-                    <p>
-                      {submission.site?.name ?? "Unavailable site"} ·{" "}
-                      {submission.workDate}
-                    </p>
-                  </div>
+            <>
+              <div className="summary-grid">
+                <div className="summary-stat">
+                  <span>Matching submissions</span>
+                  <strong>{summary.total}</strong>
+                </div>
+                <div className="summary-stat">
+                  <span>Authorized</span>
+                  <strong>{summary.authorized}</strong>
+                </div>
+                <div className="summary-stat">
+                  <span>Awaiting authorization</span>
+                  <strong>{summary.awaitingAuthorization}</strong>
+                </div>
+              </div>
 
-                  <div className="submission-actions">
-                    <StatusBadge status={submission.status} />
-                    <button
-                      className="secondary"
-                      onClick={() => openSubmission(submission._id)}
+              {summary.sites.length > 0 && (
+                <div className="site-summary">
+                  <h3>Submissions per site</h3>
+                  {summary.sites.map((site) => (
+                    <div
+                      className="site-summary-row"
+                      key={site.siteId}
                     >
-                      View form
-                    </button>
+                      <span>{site.name}</span>
+                      <strong>
+                        {site.total} submitted · {site.authorized} authorized
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-                  </div>
-                </article>
-              ))}
-            </div>
+              {submissions.length === 0 ? (
+                <div className="empty">
+                  No submissions match the applied filters.
+                </div>
+              ) : (
+                <div className="submission-list">
+                  {submissions.map((submission) => (
+                    <article
+                      className="submission"
+                      key={submission._id}
+                    >
+                      <div>
+                        <strong>
+                          {submission.worker?.name ?? "Unavailable worker"}
+                        </strong>
+                        <p>
+                          {submission.site?.name ?? "Unavailable site"} ·{" "}
+                          {submission.workDate}
+                        </p>
+                      </div>
 
+                      <div className="submission-actions">
+                        <StatusBadge status={submission.status} />
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() =>
+                            void openSubmission(submission._id)
+                          }
+                        >
+                          View form
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
       )}

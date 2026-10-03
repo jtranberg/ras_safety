@@ -25,87 +25,192 @@ router.get("/sites", async (_req, res) => {
   res.json({ sites });
 });
 
-router.get("/submissions", async (req, res) => {
-  // The server decides whose records a worker can read.
-  const filter =
-    req.user.role === "ADMIN" ? {} : { worker: req.user._id };
+router.get("/submissions", async (req, res, next) => {
+  try {
+    const filter = req.user.role === "ADMIN" ? {} : { worker: req.user._id };
 
-  const submissions = await Submission.find(filter)
-    .populate("worker", "name")
-    .populate("site", "name")
-    .populate("authorizedBy", "name")
-    .sort({ workDate: -1, createdAt: -1 })
-    .limit(100)
-    .lean();
+    const { siteId, workerId, from, to } = req.query;
 
-  res.json({ submissions });
-});
+    function validDate(value) {
+      if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+      }
 
-router.post(
-  "/submissions",
-  requireRole("FRAMER"),
-  async (req, res) => {
-    const { siteId, workDate, checklist, notes = "" } = req.body ?? {};
+      const date = new Date(`${value}T00:00:00.000Z`);
 
-    if (
-      typeof siteId !== "string" ||
-      !mongoose.isObjectIdOrHexString(siteId)
-    ) {
-      return res.status(400).json({ message: "Select a valid site." });
+      return (
+        !Number.isNaN(date.getTime()) &&
+        date.toISOString().slice(0, 10) === value
+      );
+    }
+
+    if (siteId !== undefined) {
+      if (
+        typeof siteId !== "string" ||
+        !mongoose.isObjectIdOrHexString(siteId)
+      ) {
+        return res.status(400).json({ message: "Invalid site filter." });
+      }
+
+      filter.site = new mongoose.Types.ObjectId(siteId);
+    }
+
+    if (workerId !== undefined) {
+      if (req.user.role !== "ADMIN") {
+        return res.status(403).json({ message: "Access denied." });
+      }
+
+      if (
+        typeof workerId !== "string" ||
+        !mongoose.isObjectIdOrHexString(workerId)
+      ) {
+        return res.status(400).json({ message: "Invalid worker filter." });
+      }
+
+      filter.worker = new mongoose.Types.ObjectId(workerId);
     }
 
     if (
-      typeof workDate !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(workDate)
-    ) {
-      return res.status(400).json({ message: "Select a valid work date." });
-    }
-
-    const parsedDate = new Date(`${workDate}T00:00:00.000Z`);
-
-    if (
-      Number.isNaN(parsedDate.getTime()) ||
-      parsedDate.toISOString().slice(0, 10) !== workDate
-    ) {
-      return res.status(400).json({ message: "Select a valid work date." });
-    }
-
-    if (
-      !checklist ||
-      !checklistKeys.every((key) => typeof checklist[key] === "boolean")
+      (from !== undefined && !validDate(from)) ||
+      (to !== undefined && !validDate(to)) ||
+      (from && to && from > to)
     ) {
       return res.status(400).json({
-        message: "Answer every safety checklist item.",
+        message: "Enter a valid date range.",
       });
     }
 
-    if (typeof notes !== "string" || notes.length > 5000) {
-      return res.status(400).json({
-        message: "Notes must be no more than 5,000 characters.",
-      });
+    if (from || to) {
+      filter.workDate = {
+        ...(from ? { $gte: from } : {}),
+        ...(to ? { $lte: to } : {}),
+      };
     }
 
-    const site = await Site.findOne({ _id: siteId, active: true });
+    const [submissions, siteSummary] = await Promise.all([
+      Submission.find(filter)
+        .populate("worker", "name")
+        .populate("site", "name")
+        .populate("authorizedBy", "name")
+        .populate("revokedBy", "name")
+        .sort({ workDate: -1, createdAt: -1 })
+        .limit(100)
+        .lean(),
 
-    if (!site) {
-      return res.status(400).json({ message: "Site is unavailable." });
-    }
+      Submission.aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: "$site",
+            total: { $sum: 1 },
+            authorized: {
+              $sum: {
+                $cond: [{ $eq: ["$status", "AUTHORIZED"] }, 1, 0],
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: Site.collection.name,
+            localField: "_id",
+            foreignField: "_id",
+            as: "site",
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            siteId: { $toString: "$_id" },
+            name: {
+              $ifNull: [
+                { $arrayElemAt: ["$site.name", 0] },
+                "Unavailable site",
+              ],
+            },
+            total: 1,
+            authorized: 1,
+          },
+        },
+        { $sort: { name: 1 } },
+      ]),
+    ]);
 
-    const safeChecklist = Object.fromEntries(
-      checklistKeys.map((key) => [key, checklist[key]])
+    const total = siteSummary.reduce((sum, site) => sum + site.total, 0);
+    const authorized = siteSummary.reduce(
+      (sum, site) => sum + site.authorized,
+      0,
     );
 
-    const submission = await Submission.create({
-      worker: req.user._id,
-      site: site._id,
-      workDate,
-      checklist: safeChecklist,
-      notes: notes.trim(),
+    res.json({
+      submissions,
+      summary: {
+        total,
+        authorized,
+        awaitingAuthorization: total - authorized,
+        sites: siteSummary,
+      },
     });
-
-    res.status(201).json({ submission });
+  } catch (error) {
+    next(error);
   }
-);
+});
+
+router.post("/submissions", requireRole("FRAMER"), async (req, res) => {
+  const { siteId, workDate, checklist, notes = "" } = req.body ?? {};
+
+  if (typeof siteId !== "string" || !mongoose.isObjectIdOrHexString(siteId)) {
+    return res.status(400).json({ message: "Select a valid site." });
+  }
+
+  if (typeof workDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(workDate)) {
+    return res.status(400).json({ message: "Select a valid work date." });
+  }
+
+  const parsedDate = new Date(`${workDate}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== workDate
+  ) {
+    return res.status(400).json({ message: "Select a valid work date." });
+  }
+
+  if (
+    !checklist ||
+    !checklistKeys.every((key) => typeof checklist[key] === "boolean")
+  ) {
+    return res.status(400).json({
+      message: "Answer every safety checklist item.",
+    });
+  }
+
+  if (typeof notes !== "string" || notes.length > 5000) {
+    return res.status(400).json({
+      message: "Notes must be no more than 5,000 characters.",
+    });
+  }
+
+  const site = await Site.findOne({ _id: siteId, active: true });
+
+  if (!site) {
+    return res.status(400).json({ message: "Site is unavailable." });
+  }
+
+  const safeChecklist = Object.fromEntries(
+    checklistKeys.map((key) => [key, checklist[key]]),
+  );
+
+  const submission = await Submission.create({
+    worker: req.user._id,
+    site: site._id,
+    workDate,
+    checklist: safeChecklist,
+    notes: notes.trim(),
+  });
+
+  res.status(201).json({ submission });
+});
 
 router.get("/submissions/:id", async (req, res) => {
   if (!mongoose.isObjectIdOrHexString(req.params.id)) {
@@ -131,50 +236,46 @@ router.get("/submissions/:id", async (req, res) => {
   res.json({ submission });
 });
 
-router.post(
-  "/sites",
-  requireRole("ADMIN"),
-  async (req, res, next) => {
-    try {
-      const { name, address = "" } = req.body ?? {};
+router.post("/sites", requireRole("ADMIN"), async (req, res, next) => {
+  try {
+    const { name, address = "" } = req.body ?? {};
 
-      if (
-        typeof name !== "string" ||
-        !name.trim() ||
-        name.trim().length > 120 ||
-        typeof address !== "string" ||
-        address.trim().length > 300
-      ) {
-        return res.status(400).json({
-          message:
-            "Enter a site name (maximum 120 characters) and an optional address (maximum 300 characters).",
-        });
-      }
-
-      const site = await Site.create({
-        name: name.trim(),
-        address: address.trim(),
-        active: true,
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      name.trim().length > 120 ||
+      typeof address !== "string" ||
+      address.trim().length > 300
+    ) {
+      return res.status(400).json({
+        message:
+          "Enter a site name (maximum 120 characters) and an optional address (maximum 300 characters).",
       });
-
-      res.status(201).json({
-        site: {
-          _id: String(site._id),
-          name: site.name,
-          address: site.address,
-        },
-      });
-    } catch (error) {
-      if (error.code === 11000) {
-        return res.status(409).json({
-          message: "A site with that name already exists.",
-        });
-      }
-
-      next(error);
     }
+
+    const site = await Site.create({
+      name: name.trim(),
+      address: address.trim(),
+      active: true,
+    });
+
+    res.status(201).json({
+      site: {
+        _id: String(site._id),
+        name: site.name,
+        address: site.address,
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "A site with that name already exists.",
+      });
+    }
+
+    next(error);
   }
-);
+});
 
 router.patch(
   "/submissions/:id/authorize",
@@ -199,7 +300,7 @@ router.patch(
           authorizedAt: new Date(),
         },
       },
-      { returnDocument: "after", runValidators: true }
+      { returnDocument: "after", runValidators: true },
     )
       .populate("worker", "name")
       .populate("site", "name")
@@ -221,7 +322,7 @@ router.patch(
     }
 
     res.json({ submission });
-  }
+  },
 );
 
 router.patch(
@@ -246,7 +347,7 @@ router.patch(
           revokedAt: new Date(),
         },
       },
-      { returnDocument: "after", runValidators: true }
+      { returnDocument: "after", runValidators: true },
     )
       .populate("worker", "name")
       .populate("site", "name")
@@ -262,7 +363,7 @@ router.patch(
     }
 
     res.json({ submission });
-  }
+  },
 );
 
 export default router;
