@@ -1,8 +1,59 @@
 .ras-privacy-footer {
+  box-sizing: border-box;
+  width: min(1100px, calc(100% - 2rem));
+  margin: 2rem auto 1.5rem;
+  padding: 1.5rem 2rem;
+
   display: flex;
-  justify-content: center;
-  padding: 1.25rem;
-  margin-top: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+
+  background: #17212b;
+  color: #fff;
+  border: 1px solid #536575;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  font-size: 0.9rem;
+}
+.ras-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.ras-privacy-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ras-footer-business {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.ras-privacy-footer a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+
+
+.ras-footer-business > span {
+  color: #cbd5e1;
+  
+}
+
+@media (max-width: 600px) {
+  .ras-privacy-footer {
+    padding: 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 .ras-privacy-footer a,
 .ras-privacy-policy a {

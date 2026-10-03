@@ -184,9 +184,24 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="ras-privacy-footer">
-        <a href="#privacy">Privacy Policy</a>
-      </footer>
+     <footer className="ras-privacy-footer">
+  <div className="ras-footer-business">
+    <a
+      href="https://www.rasltd.ca/"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Ron Anderson &amp; Sons Ltd.
+    </a>
+    <span>   Langford, British Columbia</span>
+  </div>
+
+  <div className="ras-footer-links">
+    <a href="tel:+18447277279">1.844.727.7279 </a>
+    <a href="mailto:info@rasltd.ca">info@rasltd.ca </a>
+    <a href="#privacy">Privacy Policy</a>
+  </div>
+</footer>
       <CookieNotice />
     </div>
   );
