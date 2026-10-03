@@ -28,6 +28,9 @@ Use dedicated demonstration accounts with fictional data.
 - Photo storage: Cloudflare R2
 
 ## Features
+## Entity-Relationship Diagram
+
+![RAS database ERD](docs/RAS_ERD.png)
 
 ### Framer workspace
 
