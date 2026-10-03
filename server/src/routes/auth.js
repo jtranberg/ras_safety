@@ -82,12 +82,12 @@ router.post("/logout", (req, res, next) => {
   req.session.destroy((error) => {
     if (error) return next(error);
 
-    res.clearCookie("ras.sid", {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
+   res.clearCookie("ras.sid", {
+  path: "/",
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  secure: process.env.NODE_ENV === "production",
+});
 
     res.json({ message: "Logged out." });
   });

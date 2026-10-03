@@ -12,6 +12,7 @@ import safetyRoutes from "./routes/safety.js";
 import photoRoutes from "./routes/photos.js";
 
 const app = express();
+app.set("trust proxy", 1);
 const port = Number(process.env.PORT || 3000);
 
 app.use(helmet());
@@ -71,12 +72,12 @@ app.use(
       mongoUrl: process.env.MONGODB_URI,
       collectionName: "sessions",
     }),
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 8 * 60 * 60 * 1000,
-    },
+   cookie: {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: 8 * 60 * 60 * 1000,
+},
   })
 );
 
