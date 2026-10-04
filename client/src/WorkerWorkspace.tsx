@@ -189,15 +189,15 @@ export default function WorkerWorkspace({ user }: { user: User }) {
                 </select>
               </label>
 
-              <label>
-                Work date
-                <input
-                  name="workDate"
-                  type="date"
-                  defaultValue={todayLocal()}
-                  required
-                />
-              </label>
+             <label>
+  Work date
+  <input
+    name="workDate"
+    type="text"
+    value={todayLocal()}
+    readOnly
+  />
+</label>
             </div>
 
             <fieldset>
