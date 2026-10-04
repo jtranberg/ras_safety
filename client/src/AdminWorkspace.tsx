@@ -11,6 +11,19 @@ const checks = [
   ["laddersScaffolding", "Ladders and scaffolding inspected"],
   ["toolsCords", "Tools and cords in good condition"],
   ["hazardsIdentified", "Hazards identified"],
+  ["siteOrientation", "Site orientation and daily instructions reviewed"],
+  ["emergencyProcedures", "Emergency procedures and muster point reviewed"],
+  ["firstAid", "First aid supplies and attendant location known"],
+  ["fireSafety", "Fire extinguishers accessible and locations known"],
+  ["accessRoutes", "Walkways, stairs and exits clear"],
+  ["housekeeping", "Work area clear of debris and tripping hazards"],
+  ["materialStorage", "Materials stacked and secured safely"],
+  ["overheadHazards", "Overhead hazards assessed and controlled"],
+  ["openingsGuarded", "Floor openings and exposed edges protected"],
+  ["equipment", "Equipment inspected before use"],
+  ["vehicleTraffic", "Vehicle and equipment movement hazards controlled"],
+  ["weatherConditions", "Weather conditions assessed for planned work"],
+  ["taskCommunication", "Work tasks and hazards communicated to the crew"],
 ] as const;
 
 type ChecklistKey = (typeof checks)[number][0];

@@ -12,6 +12,19 @@ const checklistKeys = [
   "laddersScaffolding",
   "toolsCords",
   "hazardsIdentified",
+  "siteOrientation",
+  "emergencyProcedures",
+  "firstAid",
+  "fireSafety",
+  "accessRoutes",
+  "housekeeping",
+  "materialStorage",
+  "overheadHazards",
+  "openingsGuarded",
+  "equipment",
+  "vehicleTraffic",
+  "weatherConditions",
+  "taskCommunication",
 ];
 
 router.use(requireAuth);

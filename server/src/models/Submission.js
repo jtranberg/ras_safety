@@ -1,5 +1,11 @@
 import mongoose from "mongoose";
 
+// New checks are required for new submissions.
+// Older submissions retain their original answers.
+function requiredForNewSubmission() {
+  return this.ownerDocument().isNew;
+}
+
 const checklistSchema = new mongoose.Schema(
   {
     ppe: { type: Boolean, required: true },
@@ -7,8 +13,61 @@ const checklistSchema = new mongoose.Schema(
     laddersScaffolding: { type: Boolean, required: true },
     toolsCords: { type: Boolean, required: true },
     hazardsIdentified: { type: Boolean, required: true },
+
+    siteOrientation: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    emergencyProcedures: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    firstAid: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    fireSafety: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    accessRoutes: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    housekeeping: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    materialStorage: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    overheadHazards: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    openingsGuarded: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    equipment: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    vehicleTraffic: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    weatherConditions: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
+    taskCommunication: {
+      type: Boolean,
+      required: requiredForNewSubmission,
+    },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const photoSchema = new mongoose.Schema(
@@ -19,7 +78,7 @@ const photoSchema = new mongoose.Schema(
     contentType: { type: String, required: true },
     size: { type: Number, required: true, min: 1 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const submissionSchema = new mongoose.Schema(
@@ -34,6 +93,7 @@ const submissionSchema = new mongoose.Schema(
       ref: "Site",
       required: true,
     },
+
     // Local work date, stored independently of UTC submission time.
     workDate: {
       type: String,
@@ -51,34 +111,34 @@ const submissionSchema = new mongoose.Schema(
       default: "",
     },
     status: {
-  type: String,
-  enum: ["SUBMITTED", "REVIEWED", "AUTHORIZED"],
-  default: "SUBMITTED",
-},
-authorizedBy: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User",
-  default: null,
-},
-authorizedAt: {
-  type: Date,
-  default: null,
-},
-revokedBy: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User",
-  default: null,
-},
-revokedAt: {
-  type: Date,
-  default: null,
-},
+      type: String,
+      enum: ["SUBMITTED", "REVIEWED", "AUTHORIZED"],
+      default: "SUBMITTED",
+    },
+    authorizedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    authorizedAt: {
+      type: Date,
+      default: null,
+    },
+    revokedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    revokedAt: {
+      type: Date,
+      default: null,
+    },
     photos: {
       type: [photoSchema],
       default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 submissionSchema.index({ worker: 1, workDate: -1 });
