@@ -24,6 +24,11 @@ const userSchema = new mongoose.Schema(
       enum: ["FRAMER", "ADMIN"],
       required: true,
     },
+    trade: {
+      type: String,
+      trim: true,
+      default: "Framer",
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -5,6 +5,7 @@ type Worker = {
   id: string;
   name: string;
   email: string;
+  trade?: string;
   isActive: boolean;
 };
 type LoginDetails = {
@@ -13,6 +14,19 @@ type LoginDetails = {
   email: string;
   password: string;
 };
+const trades = [
+  "Framer",
+  "Carpenter",
+  "Roofer",
+  "Electrician",
+  "Plumber",
+  "Drywaller",
+  "Painter",
+  "Labourer",
+  "Equipment operator",
+  "Other",
+];
+
 export default function WorkerAccessPanel() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,12 +37,13 @@ export default function WorkerAccessPanel() {
   const [message, setMessage] = useState("");
   const [addingWorker, setAddingWorker] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newTrade, setNewTrade] = useState("Framer");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loginDetails, setLoginDetails] = useState<LoginDetails | null>(null);
   // Keep newly entered credentials only in memory, for up to five minutes.
   const [showNewPassword, setShowNewPassword] = useState(false);
-const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   useEffect(() => {
     if (!loginDetails) return;
     const timer = window.setTimeout(() => setLoginDetails(null), 5 * 60 * 1000);
@@ -78,6 +93,7 @@ const [showPassword, setShowPassword] = useState(false);
   }, []);
   function clearNewWorker() {
     setNewName("");
+    setNewTrade("Framer");
     setNewEmail("");
     setNewPassword("");
     setShowNewPassword(false);
@@ -96,6 +112,7 @@ const [showPassword, setShowPassword] = useState(false);
           name: newName.trim(),
           email: newEmail.trim(),
           password: newPassword,
+          trade: newTrade,
         }),
       });
       setWorkers((previous) =>
@@ -120,6 +137,42 @@ const [showPassword, setShowPassword] = useState(false);
       setBusy(false);
     }
   }
+  async function saveTrade(event: FormEvent<HTMLFormElement>, worker: Worker) {
+    event.preventDefault();
+    if (busy) return;
+
+    const data = new FormData(event.currentTarget);
+    const trade = String(data.get("trade") ?? "").trim();
+    if (!trade) {
+      setError("Select a trade.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const result = await api<{ worker: Worker }>(
+        `/auth/workers/${worker.id}/trade`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ trade }),
+        },
+      );
+      setWorkers((previous) =>
+        previous.map((person) =>
+          person.id === worker.id ? result.worker : person,
+        ),
+      );
+      setMessage(`${result.worker.name}'s trade updated to ${result.worker.trade}.`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update trade.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function updateAccess(
     workerId: string,
     action: "password" | "revoke"
@@ -210,7 +263,7 @@ const [showPassword, setShowPassword] = useState(false);
       <span className="eyebrow">ADMIN CONTROLS</span>
       <h2>Worker access</h2>
       <p className="muted">
-        Add workers and manage individual passwords and access.
+        Add workers, assign trades, and manage individual passwords and access.
         Saving a new password restores access and ends existing sessions.
       </p>
       {error && <p className="error" role="alert">{error}</p>}
@@ -238,7 +291,6 @@ const [showPassword, setShowPassword] = useState(false);
           <label>
             Full name
             <input
-            
               type="text"
               autoComplete="off"
               value={newName}
@@ -259,6 +311,19 @@ const [showPassword, setShowPassword] = useState(false);
               required
               disabled={busy}
             />
+          </label>
+          <label>
+            Trade
+            <select
+              value={newTrade}
+              onChange={(event) => setNewTrade(event.target.value)}
+              required
+              disabled={busy}
+            >
+              {trades.map((trade) => (
+                <option key={trade} value={trade}>{trade}</option>
+              ))}
+            </select>
           </label>
           <label>
             Initial password
@@ -311,6 +376,31 @@ const [showPassword, setShowPassword] = useState(false);
               <div>
                 <strong>{worker.name}</strong>
                 <p>{worker.email}</p>
+                <p className="muted">Trade: {worker.trade ?? "Framer"}</p>
+                <form
+                  key={`${worker.id}:${worker.trade ?? "Framer"}`}
+                  onSubmit={(event) => void saveTrade(event, worker)}
+                >
+                  <label>
+                    Trade for {worker.name}
+                    <select
+                      name="trade"
+                      defaultValue={worker.trade ?? "Framer"}
+                      required
+                      disabled={busy}
+                    >
+                      {worker.trade && !trades.includes(worker.trade) && (
+                        <option value={worker.trade}>{worker.trade}</option>
+                      )}
+                      {trades.map((trade) => (
+                        <option key={trade} value={trade}>{trade}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="submit" className="secondary" disabled={busy}>
+                    Save trade
+                  </button>
+                </form>
                 <span className="badge">
                   {worker.isActive ? "Access active" : "Access revoked"}
                 </span>

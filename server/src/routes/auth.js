@@ -8,7 +8,6 @@ import {
   requireRole,
 } from "../middleware/auth.js";
 
-
 const router = Router();
 
 const loginLimiter = rateLimit({
@@ -19,59 +18,81 @@ const loginLimiter = rateLimit({
   message: { message: "Too many login attempts. Try again later." },
 });
 
+function validTrade(trade) {
+  return (
+    typeof trade === "string" &&
+    trade.trim().length > 0 &&
+    trade.trim().length <= 100
+  );
+}
+
+function workerDetails(worker) {
+  return {
+    id: String(worker._id),
+    name: worker.name,
+    email: worker.email,
+    trade: worker.trade ?? "Framer",
+    isActive: worker.isActive !== false,
+  };
+}
+
 // Compare against a dummy hash when the email is unknown.
 const dummyHash = await bcrypt.hash("unused-login-comparison", 12);
 
-router.post("/login", loginLimiter, async (req, res) => {
-  const { email, password } = req.body ?? {};
+router.post("/login", loginLimiter, async (req, res, next) => {
+  try {
+    const { email, password } = req.body ?? {};
 
-  if (
-    typeof email !== "string" ||
-    typeof password !== "string" ||
-    email.length > 254 ||
-    password.length > 128 ||
-    !email.trim() ||
-    !password
-  ) {
-    return res.status(400).json({
-      message: "Enter a valid email and password.",
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      email.length > 254 ||
+      password.length > 128 ||
+      !email.trim() ||
+      !password
+    ) {
+      return res.status(400).json({
+        message: "Enter a valid email and password.",
+      });
+    }
+
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+    }).select("+passwordHash");
+
+    const valid = await bcrypt.compare(
+      password,
+      user?.passwordHash ?? dummyHash,
+    );
+
+    if (!user || !valid || user.isActive === false) {
+      return res.status(401).json({
+        message: "Invalid email or password.",
+      });
+    }
+
+    // Replace any previous session before authenticating.
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((error) => {
+        if (error) reject(error);
+        else resolve();
+      });
     });
+
+    req.session.userId = String(user._id);
+    req.session.sessionVersion = user.sessionVersion ?? 0;
+
+    await new Promise((resolve, reject) => {
+      req.session.save((error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+
+    res.json({ user: publicUser(user) });
+  } catch (error) {
+    next(error);
   }
-
-  const user = await User.findOne({
-    email: email.trim().toLowerCase(),
-  }).select("+passwordHash");
-
-  const valid = await bcrypt.compare(
-    password,
-    user?.passwordHash ?? dummyHash
-  );
-
-  if (!user || !valid || user.isActive === false) {
-    return res.status(401).json({
-      message: "Invalid email or password.",
-    });
-  }
-
-  // Replace any previous session before authenticating.
-  await new Promise((resolve, reject) => {
-    req.session.regenerate((error) => {
-      if (error) reject(error);
-      else resolve();
-    });
-  });
-
-  req.session.userId = String(user._id);
-  req.session.sessionVersion = user.sessionVersion ?? 0;
-
-  await new Promise((resolve, reject) => {
-    req.session.save((error) => {
-      if (error) reject(error);
-      else resolve();
-    });
-  });
-
-  res.json({ user: publicUser(user) });
 });
 
 router.get("/me", requireAuth, (req, res) => {
@@ -82,12 +103,12 @@ router.post("/logout", (req, res, next) => {
   req.session.destroy((error) => {
     if (error) return next(error);
 
-   res.clearCookie("ras.sid", {
-  path: "/",
-  httpOnly: true,
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  secure: process.env.NODE_ENV === "production",
-});
+    res.clearCookie("ras.sid", {
+      path: "/",
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
 
     res.json({ message: "Logged out." });
   });
@@ -102,20 +123,58 @@ router.get(
     try {
       const workers = await User.find({ role: "FRAMER" })
         .sort({ name: 1 })
-        .select("name email isActive");
+        .select("name email trade isActive");
 
       res.json({
-        workers: workers.map((worker) => ({
-          id: String(worker._id),
-          name: worker.name,
-          email: worker.email,
-          isActive: worker.isActive !== false,
-        })),
+        workers: workers.map(workerDetails),
       });
     } catch (error) {
       next(error);
     }
-  }
+  },
+);
+
+// Change a worker's trade without changing their access role.
+router.patch(
+  "/workers/:id/trade",
+  requireAuth,
+  requireRole("ADMIN"),
+  async (req, res, next) => {
+    try {
+      if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
+        return res.status(400).json({
+          message: "Invalid worker ID.",
+        });
+      }
+
+      const { trade } = req.body ?? {};
+
+      if (!validTrade(trade)) {
+        return res.status(400).json({
+          message: "Enter a trade of no more than 100 characters.",
+        });
+      }
+
+      const worker = await User.findOneAndUpdate(
+        { _id: req.params.id, role: "FRAMER" },
+        { $set: { trade: trade.trim() } },
+        { returnDocument: "after", runValidators: true },
+      ).select("name email trade isActive");
+
+      if (!worker) {
+        return res.status(404).json({
+          message: "Worker not found.",
+        });
+      }
+
+      res.json({
+        message: "Worker trade updated.",
+        worker: workerDetails(worker),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 );
 
 // Set/change a password and restore access.
@@ -126,7 +185,9 @@ router.patch(
   async (req, res, next) => {
     try {
       if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
-        return res.status(400).json({ message: "Invalid worker ID." });
+        return res.status(400).json({
+          message: "Invalid worker ID.",
+        });
       }
 
       const { password } = req.body ?? {};
@@ -137,8 +198,7 @@ router.patch(
         Buffer.byteLength(password, "utf8") > 72
       ) {
         return res.status(400).json({
-          message:
-            "Use at least 8 characters and no more than 72 UTF-8 bytes.",
+          message: "Use at least 8 characters and no more than 72 UTF-8 bytes.",
         });
       }
 
@@ -150,18 +210,22 @@ router.patch(
           $set: { passwordHash, isActive: true },
           $inc: { sessionVersion: 1 },
         },
-        { returnDocument: "after", runValidators: true }
+        { returnDocument: "after", runValidators: true },
       );
 
       if (!worker) {
-        return res.status(404).json({ message: "Worker not found." });
+        return res.status(404).json({
+          message: "Worker not found.",
+        });
       }
 
-      res.json({ message: "Password updated. Worker access is active." });
+      res.json({
+        message: "Password updated. Worker access is active.",
+      });
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 // Revoke access and invalidate existing sessions.
@@ -172,7 +236,9 @@ router.patch(
   async (req, res, next) => {
     try {
       if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
-        return res.status(400).json({ message: "Invalid worker ID." });
+        return res.status(400).json({
+          message: "Invalid worker ID.",
+        });
       }
 
       const worker = await User.findOneAndUpdate(
@@ -181,27 +247,41 @@ router.patch(
           $set: { isActive: false },
           $inc: { sessionVersion: 1 },
         },
-        { returnDocument: "after", runValidators: true }
+        { returnDocument: "after", runValidators: true },
       );
 
       if (!worker) {
-        return res.status(404).json({ message: "Worker not found." });
+        return res.status(404).json({
+          message: "Worker not found.",
+        });
       }
 
       res.json({ message: "Worker access revoked." });
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
+// Create a worker with an assigned trade.
 router.post(
   "/workers",
   requireAuth,
   requireRole("ADMIN"),
   async (req, res, next) => {
     try {
-      const { name, email, password } = req.body ?? {};
+      const {
+        name,
+        email,
+        password,
+        trade = "Framer",
+      } = req.body ?? {};
+
+      if (!validTrade(trade)) {
+        return res.status(400).json({
+          message: "Enter a trade of no more than 100 characters.",
+        });
+      }
 
       if (
         typeof name !== "string" ||
@@ -225,17 +305,13 @@ router.post(
         email: email.trim().toLowerCase(),
         passwordHash: await bcrypt.hash(password, 12),
         role: "FRAMER",
+        trade: trade.trim(),
         isActive: true,
         sessionVersion: 0,
       });
 
       res.status(201).json({
-        worker: {
-          id: String(worker._id),
-          name: worker.name,
-          email: worker.email,
-          isActive: worker.isActive,
-        },
+        worker: workerDetails(worker),
       });
     } catch (error) {
       if (error.code === 11000) {
@@ -246,7 +322,7 @@ router.post(
 
       next(error);
     }
-  }
+  },
 );
 
 router.delete(
@@ -256,7 +332,9 @@ router.delete(
   async (req, res, next) => {
     try {
       if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
-        return res.status(400).json({ message: "Invalid worker ID." });
+        return res.status(400).json({
+          message: "Invalid worker ID.",
+        });
       }
 
       const worker = await User.findOneAndDelete({
@@ -265,14 +343,16 @@ router.delete(
       });
 
       if (!worker) {
-        return res.status(404).json({ message: "Worker not found." });
+        return res.status(404).json({
+          message: "Worker not found.",
+        });
       }
 
       res.json({ message: "Worker deleted." });
     } catch (error) {
       next(error);
     }
-  }
+  },
 );
 
 export default router;

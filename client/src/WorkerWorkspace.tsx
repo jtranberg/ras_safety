@@ -189,15 +189,15 @@ export default function WorkerWorkspace({ user }: { user: User }) {
                 </select>
               </label>
 
-             <label>
-  Work date
-  <input
-    name="workDate"
-    type="text"
-    value={todayLocal()}
-    readOnly
-  />
-</label>
+              <label>
+                Work date
+                <input
+                  name="workDate"
+                  type="text"
+                  value={todayLocal()}
+                  readOnly
+                />
+              </label>
             </div>
 
             <fieldset>
@@ -241,7 +241,7 @@ export default function WorkerWorkspace({ user }: { user: User }) {
 
       <section className="card">
         <span className="eyebrow">YOUR RECORDS</span>
-        <h2>My submissions</h2>
+        <h2>Submissions</h2>
 
         <p className="muted">
           Your latest 100 submissions. Attach photos to a Submitted form below.
@@ -268,8 +268,8 @@ export default function WorkerWorkspace({ user }: { user: User }) {
 
                   <span
                     className={`badge ${submission.status === "AUTHORIZED"
-                        ? "badge-authorized"
-                        : ""
+                      ? "badge-authorized"
+                      : ""
                       }`}
                   >
                     {submission.status === "AUTHORIZED"
