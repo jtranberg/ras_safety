@@ -8,6 +8,7 @@ import "./App.css";
 import WorkerWorkspace from "./WorkerWorkspace";
 import AdminWorkspace from "./AdminWorkspace";
 import { CookieNotice, PrivacyPolicy } from "./Privacy";
+import FooterCredit from "./FooterCredit";
 
 function splashWasSeen() {
   try {
@@ -218,8 +219,10 @@ export default function App() {
           <a href="mailto:info@rasltd.ca">info@rasltd.ca</a>
           <a href="#privacy">Privacy Policy</a>
         </div>
+        <FooterCredit/>
       </footer>
       <CookieNotice />
+
     </div>
   );
 }

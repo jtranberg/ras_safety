@@ -97,7 +97,6 @@ function todayFilters(): Filters {
   const today = `${part("year")}-${part("month")}-${part("day")}`;
   return { ...emptyFilters, from: today, to: today };
 }
-
 const emptySummary: Summary = {
   total: 0,
   authorized: 0,
@@ -163,7 +162,7 @@ export default function AdminWorkspace() {
   const [todaySummary, setTodaySummary] = useState<TodaySummary | null>(null);
   const [matchingTotal, setMatchingTotal] = useState(0);
   const [exporting, setExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState("");
+  const [notice, setNotice] = useState("");
   const chartSites = [...summary.sites].sort(
     (a, b) => b.total - a.total || a.name.localeCompare(b.name)
   );
@@ -173,7 +172,6 @@ export default function AdminWorkspace() {
     : appliedFilters.from || appliedFilters.to
       ? `Work dates: ${appliedFilters.from || "earliest"} to ${appliedFilters.to || "latest"}`
       : "All work dates";
-
   const saving = pendingAction !== null;
   const controlsBusy = loading || opening || saving || exporting;
   // Validation is derived from the input values, not stored by an effect.
@@ -218,7 +216,6 @@ export default function AdminWorkspace() {
   async function loadDashboard(nextFilters: Filters) {
     setLoading(true);
     setError("");
-    setExportMessage("");
     try {
       const result = await fetchDashboard(nextFilters);
       setSubmissions(result.submissions);
@@ -250,19 +247,17 @@ export default function AdminWorkspace() {
     setFilters(nextFilters);
     void loadDashboard(nextFilters);
   }
-
   function selectStatus(status: Filters["status"]) {
     if (controlsBusy) return;
     const nextFilters = { ...appliedFilters, status };
     setFilters(nextFilters);
     void loadDashboard(nextFilters);
   }
-
   async function exportCsv() {
     if (controlsBusy) return;
     setExporting(true);
     setError("");
-    setExportMessage("");
+    setNotice("");
     try {
       const result = await api<{ csv: string; filename: string; total: number }>(
         `/submissions/admin-export?${dashboardQuery(appliedFilters)}`
@@ -276,14 +271,13 @@ export default function AdminWorkspace() {
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setExportMessage(`CSV prepared: ${result.total} matching submission${result.total === 1 ? "" : "s"}.`);
+      setNotice(`CSV prepared: ${result.total} matching submission${result.total === 1 ? "" : "s"}.`);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setExporting(false);
     }
   }
-
   async function openSubmission(id: string) {
     if (controlsBusy) return;
     setOpening(true);
@@ -303,6 +297,7 @@ export default function AdminWorkspace() {
     if (!selected || saving) return;
     setPendingAction(action);
     setError("");
+    setNotice("");
     try {
       const result = await api<{ submission: Submission }>(
         `/submissions/${selected._id}/${action}`,
@@ -316,6 +311,9 @@ export default function AdminWorkspace() {
             : submission
         )
       );
+      setNotice(action === "authorize"
+        ? `Form authorized for ${result.submission.worker?.name ?? "this worker"}.`
+        : `Authorization revoked for ${result.submission.worker?.name ?? "this worker"}. The form is awaiting authorization.`);
       // Reload matching records and summary after authorization changes.
       await loadDashboard(appliedFilters);
     } catch (err) {
@@ -326,16 +324,18 @@ export default function AdminWorkspace() {
   }
   return (
     <div className="workspace">
+      <div className="ras-feedback-slot" aria-live="polite" aria-atomic="true">
+        {notice && (
+          <div className="ras-success-feedback">
+            <span><strong>Done.</strong> {notice}</span>
+            <button type="button" className="ras-dismiss-feedback" onClick={() => setNotice("")} aria-label="Dismiss success message">Dismiss</button>
+          </div>
+        )}
+      </div>
       {error && (
         <p className="error" role="alert">
           {error}
         </p>
-      )}
-      {!selected && (
-        <>
-          <WorkerAccessPanel />
-          <SiteManagementPanel />
-        </>
       )}
       {selected ? (
         <section className="card">
@@ -426,9 +426,10 @@ export default function AdminWorkspace() {
           </p>
         </section>
       ) : (
-        <section className="card">
-          <span className="eyebrow">CREW OVERVIEW</span>
-          <h2>Safety submissions</h2>
+        <section className="card ras-dashboard-card">
+          <span className="eyebrow">DAILY SITE OPERATIONS</span>
+          <h2>Safety dashboard</h2>
+          <p className="ras-dashboard-intro">See who has submitted and what needs attention.</p>
           <p className="muted">
             Filter by site, worker, and work date. Showing up to 100
             matching submissions; summary totals include all matches.
@@ -569,7 +570,6 @@ export default function AdminWorkspace() {
             )}
           </form>
           <p className="muted">CSV includes all matches for the applied site, worker, dates and authorization status.</p>
-          {exportMessage && <p role="status">{exportMessage}</p>}
           {loading || opening ? (
             <p role="status">
               {opening
@@ -693,6 +693,29 @@ export default function AdminWorkspace() {
               )}
             </>
           )}
+        </section>
+      )}
+      {!selected && (
+        <section className="ras-management-section" aria-labelledby="management-heading">
+          <div className="ras-management-heading">
+            <span className="eyebrow">ADMIN TOOLS</span>
+            <h2 id="management-heading">Crew and job sites</h2>
+            <p className="muted">Open a section to manage accounts or update job sites.</p>
+          </div>
+          <details className="ras-management-drawer">
+            <summary>
+              <span className="ras-drawer-title">Manage workers</span>
+              <span className="ras-drawer-hint">{workerOptions.length} account{workerOptions.length === 1 ? "" : "s"}</span>
+            </summary>
+            <div className="ras-drawer-content"><WorkerAccessPanel /></div>
+          </details>
+          <details className="ras-management-drawer">
+            <summary>
+              <span className="ras-drawer-title">Manage sites</span>
+              <span className="ras-drawer-hint">{siteOptions.length} job site{siteOptions.length === 1 ? "" : "s"}</span>
+            </summary>
+            <div className="ras-drawer-content"><SiteManagementPanel /></div>
+          </details>
         </section>
       )}
     </div>
