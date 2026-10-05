@@ -1,6 +1,6 @@
 // RAS-7Q
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { SubmitEvent } from "react";
 import { api, ApiError } from "./api";
 import type { User } from "./api";
 import "./App.css";
@@ -71,7 +71,7 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [splashComplete]);
 
-  async function login(event: FormEvent<HTMLFormElement>) {
+  async function login(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     const data = new FormData(event.currentTarget);
@@ -114,7 +114,7 @@ export default function App() {
       <div className="splash-screen" role="status" aria-label="Loading RAS Safety">
         <div className="splash-content">
           <img src="/iconwhite.png" alt="RAS" className="splash-logo" />
-          <p className="splash-title">Safety Authorization form</p>
+          <p className="splash-title">Safety Authorization Form</p>
         </div>
       </div>
     );
