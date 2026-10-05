@@ -4,7 +4,7 @@ import { api, ApiError } from "./api";
 import PhotoPanel from "./PhotoPanel";
 import WorkerAccessPanel from "./WorkerAccessPanel";
 import SiteManagementPanel from "./SiteManagementPanel";
-
+import "./AdminSummary.css";
 const checks = [
   ["ppe", "Required PPE worn"],
   ["fallProtection", "Fall protection in place"],
@@ -25,9 +25,7 @@ const checks = [
   ["weatherConditions", "Weather conditions assessed for planned work"],
   ["taskCommunication", "Work tasks and hazards communicated to the crew"],
 ] as const;
-
 type ChecklistKey = (typeof checks)[number][0];
-
 type Submission = {
   _id: string;
   worker: { _id: string; name: string } | null;
@@ -42,17 +40,26 @@ type Submission = {
   revokedBy?: { _id: string; name: string } | null;
   revokedAt?: string | null;
 };
-
 type SiteOption = {
   _id: string;
   name: string;
 };
-
 type WorkerOption = {
   id: string;
   name: string;
 };
-
+type TodaySummary = {
+  date: string;
+  activeWorkerCount: number;
+  submittedWorkerCount: number;
+  missingWorkers: { id: string; name: string; trade: string }[];
+};
+type DashboardResult = {
+  submissions: Submission[];
+  summary: Summary;
+  matchingTotal: number;
+  today: TodaySummary;
+};
 type Summary = {
   total: number;
   authorized: number;
@@ -64,20 +71,32 @@ type Summary = {
     authorized: number;
   }[];
 };
-
 type Filters = {
   siteId: string;
   workerId: string;
   from: string;
   to: string;
+  status: "ALL" | "AUTHORIZED" | "AWAITING";
 };
-
 const emptyFilters: Filters = {
   siteId: "",
   workerId: "",
   from: "",
   to: "",
+  status: "ALL",
 };
+// Use the job site's business timezone, even when the admin is travelling.
+function todayFilters(): Filters {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Vancouver",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value;
+  const today = `${part("year")}-${part("month")}-${part("day")}`;
+  return { ...emptyFilters, from: today, to: today };
+}
 
 const emptySummary: Summary = {
   total: 0,
@@ -85,7 +104,6 @@ const emptySummary: Summary = {
   awaitingAuthorization: 0,
   sites: [],
 };
-
 function errorMessage(error: unknown) {
   return error instanceof ApiError
     ? error.message
@@ -93,37 +111,26 @@ function errorMessage(error: unknown) {
       ? error.message
       : "Could not reach the API.";
 }
-
-async function fetchDashboard(filters: Filters) {
+function dashboardQuery(filters: Filters) {
   const query = new URLSearchParams();
-
   if (filters.siteId) query.set("siteId", filters.siteId);
   if (filters.workerId) query.set("workerId", filters.workerId);
   if (filters.from) query.set("from", filters.from);
   if (filters.to) query.set("to", filters.to);
-
+  query.set("status", filters.status);
+  return query.toString();
+}
+async function fetchDashboard(filters: Filters) {
   const [result, sitesResult, workersResult] = await Promise.all([
-    api<{ submissions: Submission[]; summary: Summary }>(
-      `/submissions?${query.toString()}`
-    ),
+    api<DashboardResult>(`/submissions/admin-dashboard?${dashboardQuery(filters)}`),
     api<{ sites: SiteOption[] }>("/sites"),
     api<{ workers: WorkerOption[] }>("/auth/workers"),
   ]);
-
-  if (!result.summary) {
-    throw new Error(
-      "The API is missing summary data. Update the GET /submissions route."
-    );
+  if (!result.summary || !result.today || typeof result.matchingTotal !== "number") {
+    throw new Error("The API is missing admin dashboard data. Install the new admin routes and restart the server.");
   }
-
-  return {
-    submissions: result.submissions,
-    summary: result.summary,
-    sites: sitesResult.sites,
-    workers: workersResult.workers,
-  };
+  return { ...result, sites: sitesResult.sites, workers: workersResult.workers };
 }
-
 function StatusBadge({ status }: { status: Submission["status"] }) {
   return (
     <span
@@ -138,7 +145,6 @@ function StatusBadge({ status }: { status: Submission["status"] }) {
     </span>
   );
 }
-
 export default function AdminWorkspace() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selected, setSelected] = useState<Submission | null>(null);
@@ -148,40 +154,53 @@ export default function AdminWorkspace() {
   const [pendingAction, setPendingAction] = useState<
     "authorize" | "revoke" | null
   >(null);
-
   const [siteOptions, setSiteOptions] = useState<SiteOption[]>([]);
   const [workerOptions, setWorkerOptions] = useState<WorkerOption[]>([]);
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = useState<Filters>(todayFilters);
   const [appliedFilters, setAppliedFilters] =
-    useState<Filters>(emptyFilters);
+    useState<Filters>(todayFilters);
   const [summary, setSummary] = useState<Summary>(emptySummary);
+  const [todaySummary, setTodaySummary] = useState<TodaySummary | null>(null);
+  const [matchingTotal, setMatchingTotal] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
+  const chartSites = [...summary.sites].sort(
+    (a, b) => b.total - a.total || a.name.localeCompare(b.name)
+  );
+  const chartMax = Math.max(1, ...chartSites.map((site) => site.total));
+  const summaryPeriod = appliedFilters.from && appliedFilters.from === appliedFilters.to
+    ? `Work date: ${appliedFilters.from}`
+    : appliedFilters.from || appliedFilters.to
+      ? `Work dates: ${appliedFilters.from || "earliest"} to ${appliedFilters.to || "latest"}`
+      : "All work dates";
 
   const saving = pendingAction !== null;
-  const controlsBusy = loading || opening || saving;
-
+  const controlsBusy = loading || opening || saving || exporting;
   // Validation is derived from the input values, not stored by an effect.
   const filterError =
     filters.from && filters.to && filters.from > filters.to
       ? "The start date must be on or before the end date."
       : "";
-
   const filtersChanged =
     filters.siteId !== appliedFilters.siteId ||
     filters.workerId !== appliedFilters.workerId ||
     filters.from !== appliedFilters.from ||
-    filters.to !== appliedFilters.to;
-
+    filters.to !== appliedFilters.to ||
+    filters.status !== appliedFilters.status;
   // Initial loading only updates state after the API request completes.
   useEffect(() => {
     let active = true;
-
     async function loadInitialDashboard() {
       try {
-        const result = await fetchDashboard(emptyFilters);
-
+        const initialFilters = todayFilters();
+        const result = await fetchDashboard(initialFilters);
         if (active) {
+          setFilters(initialFilters);
+          setAppliedFilters(initialFilters);
           setSubmissions(result.submissions);
           setSummary(result.summary);
+          setTodaySummary(result.today);
+          setMatchingTotal(result.matchingTotal);
           setSiteOptions(result.sites);
           setWorkerOptions(result.workers);
         }
@@ -191,23 +210,21 @@ export default function AdminWorkspace() {
         if (active) setLoading(false);
       }
     }
-
     void loadInitialDashboard();
-
     return () => {
       active = false;
     };
   }, []);
-
   async function loadDashboard(nextFilters: Filters) {
     setLoading(true);
     setError("");
-
+    setExportMessage("");
     try {
       const result = await fetchDashboard(nextFilters);
-
       setSubmissions(result.submissions);
       setSummary(result.summary);
+      setTodaySummary(result.today);
+      setMatchingTotal(result.matchingTotal);
       setSiteOptions(result.sites);
       setWorkerOptions(result.workers);
       setAppliedFilters({ ...nextFilters });
@@ -217,33 +234,64 @@ export default function AdminWorkspace() {
       setLoading(false);
     }
   }
-
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (controlsBusy || filterError) return;
-
     void loadDashboard({ ...filters });
   }
-
   function clearFilters() {
     if (controlsBusy) return;
-
     setFilters({ ...emptyFilters });
     void loadDashboard({ ...emptyFilters });
+  }
+  function showToday() {
+    if (controlsBusy) return;
+    const nextFilters = todayFilters();
+    setFilters(nextFilters);
+    void loadDashboard(nextFilters);
+  }
+
+  function selectStatus(status: Filters["status"]) {
+    if (controlsBusy) return;
+    const nextFilters = { ...appliedFilters, status };
+    setFilters(nextFilters);
+    void loadDashboard(nextFilters);
+  }
+
+  async function exportCsv() {
+    if (controlsBusy) return;
+    setExporting(true);
+    setError("");
+    setExportMessage("");
+    try {
+      const result = await api<{ csv: string; filename: string; total: number }>(
+        `/submissions/admin-export?${dashboardQuery(appliedFilters)}`
+      );
+      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setExportMessage(`CSV prepared: ${result.total} matching submission${result.total === 1 ? "" : "s"}.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setExporting(false);
+    }
   }
 
   async function openSubmission(id: string) {
     if (controlsBusy) return;
-
     setOpening(true);
     setError("");
-
     try {
       const result = await api<{ submission: Submission }>(
         `/submissions/${id}`
       );
-
       setSelected(result.submission);
     } catch (err) {
       setError(errorMessage(err));
@@ -251,21 +299,16 @@ export default function AdminWorkspace() {
       setOpening(false);
     }
   }
-
   async function changeAuthorization(action: "authorize" | "revoke") {
     if (!selected || saving) return;
-
     setPendingAction(action);
     setError("");
-
     try {
       const result = await api<{ submission: Submission }>(
         `/submissions/${selected._id}/${action}`,
         { method: "PATCH" }
       );
-
       setSelected(result.submission);
-
       setSubmissions((previous) =>
         previous.map((submission) =>
           submission._id === result.submission._id
@@ -273,7 +316,6 @@ export default function AdminWorkspace() {
             : submission
         )
       );
-
       // Reload matching records and summary after authorization changes.
       await loadDashboard(appliedFilters);
     } catch (err) {
@@ -282,7 +324,6 @@ export default function AdminWorkspace() {
       setPendingAction(null);
     }
   }
-
   return (
     <div className="workspace">
       {error && (
@@ -290,14 +331,12 @@ export default function AdminWorkspace() {
           {error}
         </p>
       )}
-
       {!selected && (
         <>
           <WorkerAccessPanel />
           <SiteManagementPanel />
         </>
       )}
-
       {selected ? (
         <section className="card">
           <button
@@ -311,18 +350,14 @@ export default function AdminWorkspace() {
           >
             Back to submissions
           </button>
-
           <p className="eyebrow">SUBMISSION DETAILS</p>
           <h2>{selected.worker?.name ?? "Unavailable worker"}</h2>
-
           <p className="muted">
             {selected.site?.name ?? "Unavailable site"} ·{" "}
             {selected.workDate}
           </p>
-
           <div className="submission-actions">
             <StatusBadge status={selected.status} />
-
             {selected.status === "AUTHORIZED" ? (
               <button
                 type="button"
@@ -347,7 +382,6 @@ export default function AdminWorkspace() {
               </button>
             )}
           </div>
-
           <div aria-live="polite">
             {selected.status === "AUTHORIZED" &&
               selected.authorizedAt && (
@@ -356,7 +390,6 @@ export default function AdminWorkspace() {
                   {new Date(selected.authorizedAt).toLocaleString()}
                 </p>
               )}
-
             {selected.status !== "AUTHORIZED" && selected.revokedAt && (
               <p className="muted">
                 Authorization revoked by{" "}
@@ -366,32 +399,28 @@ export default function AdminWorkspace() {
               </p>
             )}
           </div>
-
           <dl className="review-list">
             {checks.map(([key, label]) => (
               <div key={key}>
                 <dt>{label}</dt>
                 <dd
                   className={
-                    selected.checklist[key] ? "answer-yes" : "answer-no"
+                    selected.checklist[key] === true ? "answer-yes" : selected.checklist[key] === false ? "answer-no" : "muted"
                   }
                 >
-                  {selected.checklist[key] ? "Yes" : "No"}
+                  {selected.checklist[key] === true ? "Yes" : selected.checklist[key] === false ? "No" : "Not recorded"}
                 </dd>
               </div>
             ))}
           </dl>
-
           <h3>Hazards and notes</h3>
           <p className="submission-notes">
             {selected.notes || "No notes provided."}
           </p>
-
           <PhotoPanel
             key={selected._id}
             submissionId={selected._id}
           />
-
           <p className="muted">
             Submitted: {new Date(selected.createdAt).toLocaleString()}
           </p>
@@ -400,12 +429,10 @@ export default function AdminWorkspace() {
         <section className="card">
           <span className="eyebrow">CREW OVERVIEW</span>
           <h2>Safety submissions</h2>
-
           <p className="muted">
             Filter by site, worker, and work date. Showing up to 100
             matching submissions; summary totals include all matches.
           </p>
-
           <form onSubmit={applyFilters}>
             <div className="admin-filters">
               <label>
@@ -428,7 +455,6 @@ export default function AdminWorkspace() {
                   ))}
                 </select>
               </label>
-
               <label>
                 Worker
                 <select
@@ -449,7 +475,18 @@ export default function AdminWorkspace() {
                   ))}
                 </select>
               </label>
-
+              <label>
+                Authorization
+                <select
+                  value={filters.status}
+                  disabled={controlsBusy}
+                  onChange={(event) => setFilters({ ...filters, status: event.target.value as Filters["status"] })}
+                >
+                  <option value="ALL">All statuses</option>
+                  <option value="AUTHORIZED">Authorized</option>
+                  <option value="AWAITING">Awaiting authorization</option>
+                </select>
+              </label>
               <label>
                 From
                 <input
@@ -464,7 +501,6 @@ export default function AdminWorkspace() {
                   }
                 />
               </label>
-
               <label>
                 To
                 <input
@@ -480,8 +516,15 @@ export default function AdminWorkspace() {
                 />
               </label>
             </div>
-
             <div className="submission-actions">
+              <button
+                type="button"
+                className="secondary"
+                disabled={controlsBusy}
+                onClick={showToday}
+              >
+                Today
+              </button>
               <button
                 type="submit"
                 className="primary"
@@ -489,16 +532,14 @@ export default function AdminWorkspace() {
               >
                 Apply filters
               </button>
-
               <button
                 type="button"
                 className="secondary"
                 disabled={controlsBusy}
                 onClick={clearFilters}
               >
-                Clear filters
+                All dates / clear filters
               </button>
-
               <button
                 type="button"
                 className="secondary"
@@ -507,21 +548,28 @@ export default function AdminWorkspace() {
               >
                 Refresh dashboard
               </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={controlsBusy}
+                onClick={() => void exportCsv()}
+              >
+                {exporting ? "Exporting..." : "Export CSV"}
+              </button>
             </div>
-
             {filterError && (
               <p className="error" role="alert">
                 {filterError}
               </p>
             )}
-
             {filtersChanged && !filterError && (
               <p className="muted">
                 Select Apply filters to update the results and summary.
               </p>
             )}
           </form>
-
+          <p className="muted">CSV includes all matches for the applied site, worker, dates and authorization status.</p>
+          {exportMessage && <p role="status">{exportMessage}</p>}
           {loading || opening ? (
             <p role="status">
               {opening
@@ -530,38 +578,78 @@ export default function AdminWorkspace() {
             </p>
           ) : (
             <>
-              <div className="summary-grid">
-                <div className="summary-stat">
+              <p className="muted">{summaryPeriod} · Totals and chart cover the applied site, worker and dates. Click a total to filter the submission list by status.</p>
+              <div className="ras-summary-grid" aria-label="Filter submissions by authorization status">
+                <button type="button" className="ras-summary-stat" aria-pressed={appliedFilters.status === "ALL"} disabled={controlsBusy} onClick={() => selectStatus("ALL")}>
                   <span>Matching submissions</span>
                   <strong>{summary.total}</strong>
-                </div>
-                <div className="summary-stat">
+                </button>
+                <button type="button" className="ras-summary-stat" aria-pressed={appliedFilters.status === "AUTHORIZED"} disabled={controlsBusy} onClick={() => selectStatus("AUTHORIZED")}>
                   <span>Authorized</span>
                   <strong>{summary.authorized}</strong>
-                </div>
-                <div className="summary-stat">
+                </button>
+                <button type="button" className="ras-summary-stat" aria-pressed={appliedFilters.status === "AWAITING"} disabled={controlsBusy} onClick={() => selectStatus("AWAITING")}>
                   <span>Awaiting authorization</span>
                   <strong>{summary.awaitingAuthorization}</strong>
-                </div>
+                </button>
               </div>
-
-              {summary.sites.length > 0 && (
-                <div className="site-summary">
-                  <h3>Submissions per site</h3>
-                  {summary.sites.map((site) => (
-                    <div
-                      className="site-summary-row"
-                      key={site.siteId}
-                    >
-                      <span>{site.name}</span>
-                      <strong>
-                        {site.total} submitted · {site.authorized} authorized
-                      </strong>
-                    </div>
-                  ))}
-                </div>
+              <section className="ras-site-chart" aria-labelledby="site-chart-heading">
+                <h3 id="site-chart-heading">Submissions per site</h3>
+                <p className="ras-chart-legend">
+                  <span><i className="ras-key-authorized" aria-hidden="true" />Authorized</span>
+                  <span><i className="ras-key-awaiting" aria-hidden="true" />Awaiting authorization</span>
+                </p>
+                {chartSites.length === 0 ? (
+                  <p className="muted">No submissions for the applied filters.</p>
+                ) : (
+                  <ul className="ras-chart-list">
+                    {chartSites.map((site) => {
+                      const authorized = Math.min(site.total, Math.max(0, site.authorized));
+                      const awaiting = site.total - authorized;
+                      return (
+                        <li className="ras-chart-row" key={site.siteId}>
+                          <div className="ras-chart-label">
+                            <strong>{site.name || "Unavailable site"}</strong>
+                            <span>{site.total} submitted · {authorized} authorized · {awaiting} awaiting</span>
+                          </div>
+                          <div className="ras-chart-track" aria-hidden="true">
+                            <div className="ras-chart-bar" style={{ width: `${(site.total / chartMax) * 100}%` }}>
+                              <span className="ras-bar-authorized" style={{ flexGrow: authorized }} />
+                              <span className="ras-bar-awaiting" style={{ flexGrow: awaiting }} />
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+              {todaySummary && (
+                <section className="ras-missing-panel" aria-labelledby="missing-today-heading">
+                  <h3 id="missing-today-heading">Workers with no submission today</h3>
+                  <p className="muted">
+                    {todaySummary.date} · BC time · {todaySummary.submittedWorkerCount} of {todaySummary.activeWorkerCount} active workers have submitted.
+                  </p>
+                  <p className="muted">Across all sites, regardless of the filters above. Workers may be off or unscheduled.</p>
+                  {todaySummary.activeWorkerCount === 0 ? (
+                    <p>No active worker accounts.</p>
+                  ) : todaySummary.missingWorkers.length === 0 ? (
+                    <p className="ras-all-submitted">All active workers have submitted today.</p>
+                  ) : (
+                    <>
+                      <p><strong>{todaySummary.missingWorkers.length}</strong> active worker{todaySummary.missingWorkers.length === 1 ? "" : "s"} with no submission.</p>
+                      <ul className="ras-missing-list">
+                        {todaySummary.missingWorkers.map((worker) => (
+                          <li key={worker.id}><strong>{worker.name}</strong><span>{worker.trade}</span></li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </section>
               )}
-
+              <p className="muted" role="status">
+                Showing {submissions.length} of {matchingTotal} matching submissions · {appliedFilters.status === "ALL" ? "All statuses" : appliedFilters.status === "AUTHORIZED" ? "Authorized" : "Awaiting authorization"}.
+              </p>
               {submissions.length === 0 ? (
                 <div className="empty">
                   No submissions match the applied filters.
@@ -587,7 +675,6 @@ export default function AdminWorkspace() {
                           {submission.workDate}
                         </p>
                       </div>
-
                       <div className="submission-actions">
                         <StatusBadge status={submission.status} />
                         <button

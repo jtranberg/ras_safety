@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.js";
 
 import safetyRoutes from "./routes/safety.js";
 import photoRoutes from "./routes/photos.js";
+import adminSubmissionRoutes from "./routes/adminSubmissionRoutes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -83,6 +84,7 @@ app.use(
 
 
 app.use("/api/auth", authRoutes);
+app.use("/api/submissions", adminSubmissionRoutes);
 app.use("/api", photoRoutes);
 app.use("/api", safetyRoutes);
 
