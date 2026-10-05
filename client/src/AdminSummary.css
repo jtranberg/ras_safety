@@ -66,3 +66,10 @@ button.ras-summary-stat, .ras-dashboard-card button.secondary, .ras-dashboard-ca
 }
 
 .ras-feedback-slot:empty { display: none; }
+
+.ras-drawer-content .ras-success-feedback { margin: 14px 0; }
+.ras-drawer-content button.secondary, .ras-drawer-content button.primary { transition: background-color 150ms ease, border-color 150ms ease; }
+.ras-drawer-content button:focus-visible, .ras-drawer-content input:focus-visible, .ras-drawer-content select:focus-visible { outline: 3px solid #d67524; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .ras-drawer-content button.secondary, .ras-drawer-content button.primary { transition: none; }
+}

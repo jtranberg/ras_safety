@@ -26,8 +26,9 @@ const trades = [
   "Equipment operator",
   "Other",
 ];
+type Props = { onChanged?: () => void };
 
-export default function WorkerAccessPanel() {
+export default function WorkerAccessPanel({ onChanged }: Props = {}) {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -129,6 +130,7 @@ export default function WorkerAccessPanel() {
       clearNewWorker();
       setAddingWorker(false);
       setMessage(`${result.worker.name} added. They can now sign in.`);
+      onChanged?.();
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Could not add worker."
@@ -140,18 +142,15 @@ export default function WorkerAccessPanel() {
   async function saveTrade(event: FormEvent<HTMLFormElement>, worker: Worker) {
     event.preventDefault();
     if (busy) return;
-
     const data = new FormData(event.currentTarget);
     const trade = String(data.get("trade") ?? "").trim();
     if (!trade) {
       setError("Select a trade.");
       return;
     }
-
     setBusy(true);
     setError("");
     setMessage("");
-
     try {
       const result = await api<{ worker: Worker }>(
         `/auth/workers/${worker.id}/trade`,
@@ -166,13 +165,13 @@ export default function WorkerAccessPanel() {
         ),
       );
       setMessage(`${result.worker.name}'s trade updated to ${result.worker.trade}.`);
+      onChanged?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not update trade.");
     } finally {
       setBusy(false);
     }
   }
-
   async function updateAccess(
     workerId: string,
     action: "password" | "revoke"
@@ -214,6 +213,7 @@ export default function WorkerAccessPanel() {
       setShowPassword(false);
       setSelectedId(null);
       setMessage(result.message);
+      onChanged?.();
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Could not update access."
@@ -250,6 +250,7 @@ export default function WorkerAccessPanel() {
         setShowPassword(false);
       }
       setMessage(`${worker.name}'s account deleted.`);
+      onChanged?.();
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Could not delete worker."
@@ -267,7 +268,14 @@ export default function WorkerAccessPanel() {
         Saving a new password restores access and ends existing sessions.
       </p>
       {error && <p className="error" role="alert">{error}</p>}
-      {message && <p role="status">{message}</p>}
+      <div className="ras-feedback-slot" aria-live="polite" aria-atomic="true">
+        {message && (
+          <div className="ras-success-feedback">
+            <span><strong>Done.</strong> {message}</span>
+            <button type="button" className="ras-dismiss-feedback" onClick={() => setMessage("")} aria-label="Dismiss worker success message">Dismiss</button>
+          </div>
+        )}
+      </div>
       <button
         type="button"
         className="primary add-worker-button"

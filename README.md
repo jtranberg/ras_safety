@@ -180,6 +180,37 @@ npm run build
 
 Vite generates the deployment files in `client/dist`.
 
+## Testing
+
+From the `server` directory:
+
+```bash
+node --test tests/adminSubmissionHelpers.test.mjs
+```
+
+The 11 automated helper tests cover:
+
+- BC work-date boundaries, including daylight saving time.
+- Valid filters and rejection of malformed IDs, dates, arrays, and objects.
+- Leap years and nonexistent calendar dates.
+- CSV escaping, Unicode, and spreadsheet formula handling.
+- Complete exported records and UTC authorization/revocation timestamps.
+- Photo counts and exclusion of secret metadata.
+- Older checklist answers that were not recorded.
+
+Latest local result: 11 passed, 0 failed.
+
+These are helper tests; they do not test the live database,
+authentication, photo uploads, or browser interactions.
+
+To check TypeScript and generate the production frontend,
+run from the `client` directory:
+
+```bash
+npm run build
+```
+```
+
 ## Deployment
 
 ### Netlify

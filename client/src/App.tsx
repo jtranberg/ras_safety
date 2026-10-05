@@ -4,11 +4,10 @@ import type { FormEvent } from "react";
 import { api, ApiError } from "./api";
 import type { User } from "./api";
 import "./App.css";
-
 import WorkerWorkspace from "./WorkerWorkspace";
 import AdminWorkspace from "./AdminWorkspace";
-import { CookieNotice, PrivacyPolicy } from "./Privacy";
 import FooterCredit from "./FooterCredit";
+import { CookieNotice, PrivacyPolicy } from "./Privacy";
 
 function splashWasSeen() {
   try {
@@ -43,7 +42,6 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-
     async function restoreSession() {
       try {
         const result = await api<{ user: User }>("/auth/me");
@@ -56,7 +54,6 @@ export default function App() {
         if (active) setLoading(false);
       }
     }
-
     void restoreSession();
     return () => { active = false; };
   }, []);
@@ -205,11 +202,7 @@ export default function App() {
 
       <footer className="ras-privacy-footer">
         <div className="ras-footer-business">
-          <a
-            href="https://www.rasltd.ca/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href="https://www.rasltd.ca/" target="_blank" rel="noopener noreferrer">
             Ron Anderson &amp; Sons Ltd.
           </a>
           <span>Langford, British Columbia</span>
@@ -219,10 +212,9 @@ export default function App() {
           <a href="mailto:info@rasltd.ca">info@rasltd.ca</a>
           <a href="#privacy">Privacy Policy</a>
         </div>
-        <FooterCredit/>
+        <div className="ras-footer-credit"><FooterCredit /></div>
       </footer>
       <CookieNotice />
-
     </div>
   );
 }

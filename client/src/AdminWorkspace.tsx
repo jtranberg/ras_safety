@@ -707,14 +707,14 @@ export default function AdminWorkspace() {
               <span className="ras-drawer-title">Manage workers</span>
               <span className="ras-drawer-hint">{workerOptions.length} account{workerOptions.length === 1 ? "" : "s"}</span>
             </summary>
-            <div className="ras-drawer-content"><WorkerAccessPanel /></div>
+            <div className="ras-drawer-content"><WorkerAccessPanel onChanged={() => void loadDashboard(appliedFilters)} /></div>
           </details>
           <details className="ras-management-drawer">
             <summary>
               <span className="ras-drawer-title">Manage sites</span>
               <span className="ras-drawer-hint">{siteOptions.length} job site{siteOptions.length === 1 ? "" : "s"}</span>
             </summary>
-            <div className="ras-drawer-content"><SiteManagementPanel /></div>
+            <div className="ras-drawer-content"><SiteManagementPanel onChanged={() => void loadDashboard(appliedFilters)} /></div>
           </details>
         </section>
       )}

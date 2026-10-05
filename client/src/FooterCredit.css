@@ -1,3 +1,7 @@
 .ras-builder-credit { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 5px; max-width: 100%; font-size: .78rem; line-height: 1.5; color: inherit; }
 .ras-builder-credit a { font-weight: 700; color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .ras-builder-credit a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 2px; }
+
+.ras-privacy-footer { flex-wrap: wrap; }
+.ras-footer-credit { width: 100%; flex: 0 0 100%; grid-column: 1 / -1; display: flex; justify-content: center; border-top: 1px solid rgba(255, 255, 255, .18); padding-top: 12px; margin-top: 4px; }
+.ras-builder-credit a { letter-spacing: .04em; }
