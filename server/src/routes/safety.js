@@ -240,6 +240,8 @@ router.get("/submissions/:id", async (req, res) => {
   const submission = await Submission.findOne(filter)
     .populate("worker", "name")
     .populate("site", "name")
+    .populate("authorizedBy", "name")
+    .populate("revokedBy", "name")
     .lean();
 
   if (!submission) {
@@ -365,7 +367,6 @@ router.patch(
       .populate("worker", "name")
       .populate("site", "name")
       .populate("authorizedBy", "name")
-      .populate("revokedBy", "name")
       .populate("revokedBy", "name")
       .lean();
 

@@ -19,7 +19,7 @@ Framers complete daily safety forms with photos. Administrators review submissio
 > Demo hosting: The API runs on Render’s free tier and may sleep when inactive. The first request can take a little longer while it starts up. Please allow a moment for the app to connect.
 
 - [GitHub repository](https://github.com/jtranberg/ras_safety)
-- [Entity-Relationship Diagram](docs/RAS_ERD.png)
+- [Entity-Relationship Diagram](docs/RAS_ERD.svg)
 
 ### Test Credentials
 
@@ -30,7 +30,7 @@ The demo uses fictional demonstration data.
 | Admin  | admin@example.com  | Adminpassword |
 | Framer | framer@example.com | DemoFramer    |
 
-Worker accounts and passwords are explicitly created and set by an administrator in the Admin workspace. Worker passwords are not supplied by a seed script. To test the Framer workspace, use the Framer credentials above. Administrators can also create additional workers and set their passwords in the Admin workspace.
+Worker accounts and passwords are explicitly created and set by an administrator in the Admin workspace. The supported setup uses administrator-assigned passwords. An optional legacy seed script remains available for development; it creates demo accounts with SEED_PASSWORD and leaves existing accounts unchanged. To test the Framer workspace, use the Framer credentials above. Administrators can also create additional workers and set their passwords in the Admin workspace.
 
 ## Tech Stack
 
@@ -47,7 +47,7 @@ Worker accounts and passwords are explicitly created and set by an administrator
 ### Framer Workspace
 
 - Sign in with individual credentials.
-- Select an active job site and work date.
+- Select an active job site; the work date is automatically set in the America/Vancouver timezone.
 - Complete the safety checklist and add notes.
 - Attach up to five photos per submission.
 - View their own submissions and photos.
@@ -160,11 +160,11 @@ node src/create-admin.js
 
 The script creates an Admin account and leaves existing accounts unchanged. Remove the bootstrap variables afterward.
 
-Sign in as Admin to create workers, explicitly set their passwords, and add job sites. Include a site named Kestrel Ridge in the demonstration data.
+Sign in as Admin to create workers, explicitly set their passwords, and add fictional job sites.
 
 ### Demo Data and Account Setup
 
-The deployed demo includes an Admin account, Framer accounts, and fictional job sites, including Kestrel Ridge.
+The demonstration uses Admin and Framer accounts and fictional job sites. For a fresh local database, follow the First Admin Account steps above.
 
 Worker accounts and passwords are managed through the Admin workspace. Administrators set each worker's initial password when creating the account and can change it afterward. No seed command is required for worker account setup or to test the deployed application.
 
@@ -185,7 +185,7 @@ Vite generates the deployment files in `client/dist`.
 From the `server` directory:
 
 ```bash
-node --test tests/adminSubmissionHelpers.test.mjs
+npm test
 ```
 
 The 11 automated helper tests cover:
@@ -198,17 +198,15 @@ The 11 automated helper tests cover:
 - Photo counts and exclusion of secret metadata.
 - Older checklist answers that were not recorded.
 
-Latest local result: 11 passed, 0 failed.
+Latest verified result for this revision: **16 passed, 0 failed** (11 helper tests and 5 HTTP regression tests for readiness routing, access boundaries, and submission detail responses).
 
-These are helper tests; they do not test the live database,
-authentication, photo uploads, or browser interactions.
+The helper tests do not exercise the live database, photo uploads, or browser interactions. HTTP regression tests use isolated local servers, in-memory sessions, and stubbed model responses where needed; they do not connect to MongoDB or R2.
 
 To check TypeScript and generate the production frontend,
 run from the `client` directory:
 
 ```bash
 npm run build
-```
 ```
 
 ## Deployment
@@ -269,15 +267,15 @@ The newly entered password is retained temporarily in React state for this actio
 
 ## Entity-Relationship Diagram
 
-![RAS database ERD](docs/RAS_ERD.png)
+![RAS database ERD](docs/RAS_ERD.svg)
 
 ### Data Model
 
-- \\User:\\ credentials, role, account status, and session version.
-- \\Site:\\ name, optional address, and active status.
-- \\Submission:\\ worker/site references, work date, checklist, notes, status, authorization details, and embedded photo metadata.
-- \\Checklist:\\ required embedded Boolean answers.
-- \\Photo:\\ embedded identifier, R2 object key, original filename, content type, size, and timestamps.
+- **User:** credentials, role, account status, and session version.
+- **Site:** name, optional address, and active status.
+- **Submission:** worker/site references, work date, checklist, notes, status, authorization details, and embedded photo metadata.
+- **Checklist:** embedded Boolean answers; the original five fields are always required, and the thirteen additional fields are required for new submissions.
+- **Photo:** embedded identifier, R2 object key, original filename, content type, size, and timestamps.
 
 One worker and one site can each have many submissions. Each submission contains one checklist and up to five photos through the upload API.
 
@@ -310,3 +308,13 @@ Photos are embedded documents, not a separate MongoDB collection. User and site 
 Do not commit `.env` files or infrastructure credentials.
 
 Provide `server/.env.example` and `client/.env.example` with variable names and placeholder values. Demo login credentials are separate from database, R2, and session secrets.
+
+## Readiness and review checks
+
+`GET /api/health` is public and returns HTTP 200 when MongoDB is connected, or HTTP 503 otherwise. It is registered before sessions and protected routers. It does not reveal credentials or database connection strings.
+
+Netlify SPA fallback rules are provided in `client/public/_redirects` and are copied into the frontend build. The current Privacy Policy uses hash navigation.
+
+The worker work date and admin "today" summaries use America/Vancouver. A worker form left open across midnight updates its displayed date on the next render; refresh before submitting if the page has been idle overnight.
+
+`REVIEW_FIXES.md` describes the corrections and the verification performed on this revision.

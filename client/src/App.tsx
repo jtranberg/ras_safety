@@ -1,4 +1,3 @@
-// RAS-7Q
 import { useEffect, useState } from "react";
 import type { SubmitEvent } from "react";
 import { api, ApiError } from "./api";

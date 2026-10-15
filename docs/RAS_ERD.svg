@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="1500" viewBox="0 0 1300 1500">
+<rect width="1300" height="1500" fill="#f4f8f7"/>
+<style>text{font-family:Arial,sans-serif;fill:#213c35} .title{font-size:30px;font-weight:bold}.sub{font-size:17px}.head{font-size:21px;font-weight:bold;fill:white}.field{font-size:17px}</style>
+<text x="40" y="48" class="title">RAS Site Safety - Entity-Relationship Diagram</text>
+<text x="40" y="79" class="sub">Current MongoDB models, embedded documents, and object storage</text>
+<rect x="40" y="110" width="580" height="255" rx="12" fill="white" stroke="#abc6bb"/>
+<path d="M52,110 H608 Q620,110 620,122 V158 H40 V122 Q40,110 52,110" fill="#005640"/>
+<text x="56" y="141" class="head">USER / users</text>
+<text x="56" y="186" class="field">_id: ObjectId</text>
+<text x="56" y="211" class="field">name, email (unique), passwordHash (excluded by default)</text>
+<text x="56" y="236" class="field">role: FRAMER | ADMIN; trade: String</text>
+<text x="56" y="261" class="field">isActive: Boolean; sessionVersion: Number</text>
+<text x="56" y="286" class="field">createdAt, updatedAt: Date</text>
+<rect x="680" y="110" width="580" height="255" rx="12" fill="white" stroke="#abc6bb"/>
+<path d="M692,110 H1248 Q1260,110 1260,122 V158 H680 V122 Q680,110 692,110" fill="#005640"/>
+<text x="696" y="141" class="head">SITE / sites</text>
+<text x="696" y="186" class="field">_id: ObjectId</text>
+<text x="696" y="211" class="field">name: String (unique); address: String</text>
+<text x="696" y="236" class="field">active: Boolean</text>
+<text x="696" y="261" class="field">createdAt, updatedAt: Date</text>
+<path d="M330,365 L330,425" stroke="#40765f" stroke-width="3" fill="none"/>
+<path d="M970,365 L970,425" stroke="#40765f" stroke-width="3" fill="none"/>
+<path d="M330,425 L970,425" stroke="#40765f" stroke-width="3" fill="none"/>
+<path d="M650,425 L650,465" stroke="#40765f" stroke-width="3" fill="none"/>
+<text x="55" y="399" class="sub">Worker: 1 user -&gt; many submissions; optional admin authorizer/revoker</text>
+<text x="780" y="399" class="sub">1 site -&gt; many submissions</text>
+<rect x="230" y="465" width="840" height="315" rx="12" fill="white" stroke="#abc6bb"/>
+<path d="M242,465 H1058 Q1070,465 1070,477 V513 H230 V477 Q230,465 242,465" fill="#005640"/>
+<text x="246" y="496" class="head">SUBMISSION / submissions</text>
+<text x="246" y="541" class="field">_id: ObjectId; worker: User ref; site: Site ref (required)</text>
+<text x="246" y="566" class="field">workDate: YYYY-MM-DD String; notes: String (max 5,000)</text>
+<text x="246" y="591" class="field">status: SUBMITTED | REVIEWED | AUTHORIZED</text>
+<text x="246" y="616" class="field">checklist: embedded Checklist (required)</text>
+<text x="246" y="641" class="field">authorizedBy, revokedBy: nullable User refs</text>
+<text x="246" y="666" class="field">authorizedAt, revokedAt: nullable Dates</text>
+<text x="246" y="691" class="field">photos: embedded Photo array; createdAt, updatedAt: Dates</text>
+<path d="M420,780 L420,820" stroke="#40765f" stroke-width="3" fill="none"/>
+<path d="M930,780 L930,820" stroke="#40765f" stroke-width="3" fill="none"/>
+<rect x="40" y="820" width="650" height="325" rx="12" fill="white" stroke="#abc6bb"/>
+<path d="M52,820 H678 Q690,820 690,832 V868 H40 V832 Q40,820 52,820" fill="#005640"/>
+<text x="56" y="851" class="head">CHECKLIST / embedded, no _id</text>
+<text x="56" y="896" class="field">ppe; fallProtection; laddersScaffolding; toolsCords</text>
+<text x="56" y="921" class="field">hazardsIdentified; siteOrientation; emergencyProcedures</text>
+<text x="56" y="946" class="field">firstAid; fireSafety; accessRoutes; housekeeping</text>
+<text x="56" y="971" class="field">materialStorage; overheadHazards; openingsGuarded</text>
+<text x="56" y="996" class="field">equipment; vehicleTraffic; weatherConditions</text>
+<text x="56" y="1021" class="field">taskCommunication</text>
+<text x="56" y="1046" class="field">All fields are Boolean. Original five always required.</text>
+<text x="56" y="1071" class="field">Additional thirteen required for new submissions.</text>
+<text x="56" y="1096" class="field">Older records can have missing additional answers.</text>
+<rect x="730" y="820" width="530" height="325" rx="12" fill="white" stroke="#abc6bb"/>
+<path d="M742,820 H1248 Q1260,820 1260,832 V868 H730 V832 Q730,820 742,820" fill="#005640"/>
+<text x="746" y="851" class="head">PHOTO / embedded in Submission.photos</text>
+<text x="746" y="896" class="field">_id: ObjectId (subdocument identifier)</text>
+<text x="746" y="921" class="field">objectKey; originalName; contentType: String</text>
+<text x="746" y="946" class="field">size: Number (bytes, minimum 1)</text>
+<text x="746" y="971" class="field">createdAt, updatedAt: Date</text>
+<text x="746" y="996" class="field">0-5 photos per submission (API enforced)</text>
+<text x="746" y="1021" class="field">R2 stores the WebP bytes.</text>
+<text x="746" y="1046" class="field">Signed read URLs expire after 300 seconds.</text>
+<text x="40" y="1196" class="title">Storage and integrity notes</text>
+<text x="40" y="1238" class="sub">User/site references are application relationships, not database-enforced foreign keys.</text>
+<text x="40" y="1268" class="sub">Deleting a worker retains submissions and photos; the worker reference may become unresolved.</text>
+<text x="40" y="1298" class="sub">Checklist and photos are embedded documents, not separate collections.</text>
+<text x="40" y="1328" class="sub">Indexes: (worker, workDate descending), (site, workDate descending).</text>
+<text x="40" y="1358" class="sub">Session records are stored separately in MongoDB. Worker/admin business dates use America/Vancouver.</text>
+<text x="40" y="1388" class="sub">Authorization fields retain the latest stored values; they are not a complete event history.</text>
+</svg>
