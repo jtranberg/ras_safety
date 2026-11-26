@@ -1,0 +1,41 @@
+.ras-leaderboard { margin: 24px 0; padding: 18px; border: 1px solid #dce4df; border-top: 4px solid #d67524; border-radius: 12px; background: #fff; }
+.ras-leaderboard h3 { margin: 6px 0; }
+.ras-leaderboard h4 { margin: 0 0 10px; }
+.ras-leaderboard-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ras-period-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.ras-period-tabs button { padding: 7px 12px; border: 1px solid #dce4df; border-radius: 999px; background: #f5f8f6; color: #263b30; font: inherit; font-size: .9rem; cursor: pointer; }
+.ras-period-tabs button[aria-pressed="true"] { background: #287a4c; border-color: #287a4c; color: #fff; }
+.ras-period-tabs button:disabled { cursor: wait; opacity: .7; }
+.ras-period-tabs button:focus-visible { outline: 3px solid #d67524; outline-offset: 3px; }
+.ras-my-rank { padding: 10px 14px; border: 1px solid #bad7c5; border-left: 4px solid #287a4c; border-radius: 8px; background: #eef7f1; color: #204e33; }
+.ras-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 14px 0; }
+.ras-metric { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid #dce4df; border-radius: 10px; background: #f5f8f6; color: #263b30; }
+.ras-metric span { font-size: .85rem; }
+.ras-metric strong { font-size: 1.4rem; line-height: 1.1; }
+.ras-metric small { color: #54645b; overflow-wrap: anywhere; }
+.ras-awards { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.ras-awards li { padding: 6px 12px; border-radius: 999px; background: #fff4e8; border: 1px solid #f0cfae; color: #6b3d12; font-size: .9rem; }
+.ras-podium-block { margin: 14px 0; }
+.ras-podium { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.ras-podium li { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 10px 10px 4px 4px; text-align: center; overflow-wrap: anywhere; }
+.ras-podium-1 { order: 2; min-height: 120px; background: #fdf3d0; border: 1px solid #e4c65a; }
+.ras-podium-2 { order: 1; min-height: 100px; background: #eef0f2; border: 1px solid #c3c9cf; }
+.ras-podium-3 { order: 3; min-height: 86px; background: #f7e6d8; border: 1px solid #d9a77c; }
+.ras-medal { font-weight: 700; font-size: 1.1rem; color: #263b30; }
+.ras-podium li span:last-child { font-size: .85rem; color: #54645b; }
+.ras-leaderboard-table { overflow-x: auto; border: 1px solid #dce4df; border-radius: 10px; }
+.ras-leaderboard-table:focus-visible { outline: 3px solid #d67524; outline-offset: 3px; }
+.ras-leaderboard-table table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.ras-leaderboard-table th, .ras-leaderboard-table td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #edf1ee; white-space: nowrap; }
+.ras-leaderboard-table thead th { background: #f5f8f6; color: #263b30; font-size: .8rem; }
+.ras-leaderboard-table tbody tr:last-child > * { border-bottom: 0; }
+.ras-leaderboard-me { background: #eef7f1; }
+.ras-rank { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-weight: 700; background: #edf1ee; color: #263b30; }
+.ras-rank-1 { background: #e4c65a; }
+.ras-rank-2 { background: #c3c9cf; }
+.ras-rank-3 { background: #d9a77c; }
+@media (max-width: 600px) {
+  .ras-leaderboard { padding: 14px; }
+  .ras-leaderboard-header { flex-direction: column; }
+  .ras-podium { gap: 6px; }
+}

@@ -119,3 +119,10 @@ test('reopened submission details include authorization and revocation names', a
     assert.equal(submission.revokedBy.name, 'Revoking Admin');
   });
 });
+
+test('leaderboard requires sign-in', async () => {
+  await withServer(isolatedApp(), async (base) => {
+    const response = await fetch(`${base}/api/submissions/leaderboard`);
+    assert.equal(response.status, 401);
+  });
+});

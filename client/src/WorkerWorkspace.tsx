@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { api, ApiError } from "./api";
 import type { User } from "./api";
 import PhotoPanel from "./PhotoPanel";
+import Leaderboard from "./Leaderboard";
 
 type Site = {
   _id: string;
@@ -305,6 +306,8 @@ export default function WorkerWorkspace({ user }: { user: User }) {
           </div>
         )}
       </section>
+
+      <Leaderboard key={submissions.length} currentWorkerId={user.id} />
     </div>
   );
 }
