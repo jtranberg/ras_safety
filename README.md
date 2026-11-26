@@ -74,7 +74,7 @@ Worker identity comes from the authenticated account. The backend restricts work
 
 Gamifies the daily safety form by ranking who responds first. It appears on the Admin dashboard and in the Framer workspace.
 
-- **Daily response order:** each work day, workers are ordered by when they submitted their first form. Only a worker's first form per work day counts.
+- **Daily response order:** each work day, workers are ordered by when they submitted their first form. Only a worker's first form per work day counts, and only if it was submitted on that work day (BC time), so back- or forward-dated forms do not score.
 - **Points:** 1st = 5, 2nd = 3, 3rd = 2, and every other response = 1, so consistency counts as well as speed.
 - **Rankings:** sorted by points, then first-place finishes, then average position. Workers with identical records share a rank.
 - **Per-worker metrics:** points, 1st/2nd/3rd finishes, days responded, participation rate, average position, average and fastest response time, and current and best streak.
@@ -216,14 +216,15 @@ The 11 automated admin helper tests cover:
 - Photo counts and exclusion of secret metadata.
 - Older checklist answers that were not recorded.
 
-The 5 leaderboard tests cover:
+The 7 leaderboard tests cover:
 
 - Position points and BC response times across daylight saving changes.
 - Daily response order, ignoring repeat forms on the same day.
 - Rankings, podium counts, participation, average position, streaks, and team metrics.
-- Shared ranks for tied records, skipped deleted workers, and empty periods.
+- Shared ranks for tied records, with ties decided on exact (unrounded) average position.
+- Skipped deleted workers, skipped back- or forward-dated forms, and empty periods.
 
-Latest verified result for this revision: **22 passed, 0 failed** (11 admin helper tests, 5 leaderboard tests, and 6 HTTP regression tests for readiness routing, access boundaries, submission detail responses, and leaderboard sign-in).
+Latest verified result for this revision: **24 passed, 0 failed** (11 admin helper tests, 7 leaderboard tests, and 6 HTTP regression tests for readiness routing, access boundaries, submission detail responses, and leaderboard sign-in).
 
 The helper tests do not exercise the live database, photo uploads, or browser interactions. HTTP regression tests use isolated local servers, in-memory sessions, and stubbed model responses where needed; they do not connect to MongoDB or R2.
 
