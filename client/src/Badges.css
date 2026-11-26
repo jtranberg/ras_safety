@@ -1,0 +1,18 @@
+.ras-champion-banner { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: #fdf3d0; border: 1px solid #e4c65a; color: #4d3b05; overflow-wrap: anywhere; }
+.ras-champion-banner > span:first-child { font-size: 1.4rem; }
+.ras-badge-count { margin: 0 0 12px; }
+.ras-badge-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.ras-badge-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 10px; border: 1px dashed #c3c9cf; border-radius: 12px; background: #f7f8f9; color: #54645b; text-align: center; }
+.ras-badge-tile strong { color: #263b30; }
+.ras-badge-earned { border: 1px solid #e4c65a; background: #fffaf0; color: #263b30; }
+.ras-badge-icon { font-size: 1.8rem; line-height: 1; }
+.ras-badge-tile:not(.ras-badge-earned) .ras-badge-icon { opacity: .6; }
+.ras-badge-description { font-size: .85rem; }
+.ras-badge-progress { font-size: .8rem; font-weight: 700; }
+.ras-badge-earned .ras-badge-progress { color: #287a4c; }
+.ras-badge-bar { width: 100%; height: 6px; border-radius: 999px; background: #e3e7ea; overflow: hidden; }
+.ras-badge-bar span { display: block; height: 100%; background: #287a4c; }
+.ras-badge-icons { display: flex; flex-wrap: wrap; gap: 4px; font-size: 1.2rem; }
+.ras-badge-detail { margin-top: 14px; }
+.ras-badge-detail h3 { margin: 0 0 10px; font-size: 1rem; }
+.ras-crown { margin-left: 6px; }

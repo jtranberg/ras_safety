@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api";
 import "./Leaderboard.css";
+import { ChampionBanner } from "./Badges";
+import { monthLabel } from "./champion";
+import type { MonthlyChampion } from "./champion";
 
 type LeaderboardEntry = {
   workerId: string;
@@ -36,6 +39,7 @@ type LeaderboardResult = {
     earliestResponse: { name: string; workerId: string; date: string; minutes: number } | null;
   };
   latestDay: { date: string; responses: DayResponse[] } | null;
+  monthlyChampion: MonthlyChampion | null;
 };
 export type LeaderboardPeriod = "today" | "7" | "30" | "all";
 type Period = LeaderboardPeriod;
@@ -136,6 +140,8 @@ export default function Leaderboard({
   const streakLeader = leader(entries, (entry) => entry.currentStreak);
   const mostConsistent = leader(entries, (entry) => entry.participationRate);
   const mine = currentWorkerId ? entries.find((entry) => entry.workerId === currentWorkerId) : undefined;
+  const champion = data?.monthlyChampion ?? null;
+  const championIds = new Set(champion?.winners.map((winner) => winner.workerId));
 
   return (
     <section className="ras-leaderboard" aria-labelledby="leaderboard-heading">
@@ -160,6 +166,7 @@ export default function Leaderboard({
         ))}
       </div>
       {error && <p className="error" role="alert">{error}</p>}
+      {!loading && <ChampionBanner champion={champion} />}
       {loading ? (
         <p role="status">Loading leaderboard...</p>
       ) : !metrics || entries.length === 0 ? (
@@ -227,7 +234,12 @@ export default function Leaderboard({
                 {entries.map((entry) => (
                   <tr key={entry.workerId} className={entry.workerId === currentWorkerId ? "ras-leaderboard-me" : undefined}>
                     <td><span className={`ras-rank ras-rank-${Math.min(entry.rank, 4)}`}>{entry.rank}</span></td>
-                    <th scope="row">{entry.name}</th>
+                    <th scope="row">
+                      {entry.name}
+                      {championIds.has(entry.workerId) && champion && (
+                        <span className="ras-crown" role="img" aria-label={`${monthLabel(champion.month)} champion`} title={`${monthLabel(champion.month)} champion`}>👑</span>
+                      )}
+                    </th>
                     <td><strong>{entry.points}</strong></td>
                     <td>{entry.firstPlace} / {entry.secondPlace} / {entry.thirdPlace}</td>
                     <td>{entry.daysResponded}</td>

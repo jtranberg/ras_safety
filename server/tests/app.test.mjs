@@ -156,3 +156,10 @@ test('hazard reports require sign-in', async () => {
     }
   });
 });
+
+test('badges require sign-in', async () => {
+  await withServer(isolatedApp(), async (base) => {
+    const response = await fetch(`${base}/api/submissions/badges`);
+    assert.equal(response.status, 401);
+  });
+});
