@@ -38,7 +38,8 @@ export function monthlyChampions(submissions, currentMonth) {
   for (const submission of submissions) {
     const month = submission.workDate?.slice(0, 7);
     if (!month || month >= currentMonth) continue;
-    byMonth.set(month, [...(byMonth.get(month) ?? []), submission]);
+    if (!byMonth.has(month)) byMonth.set(month, []);
+    byMonth.get(month).push(submission);
   }
   return [...byMonth.keys()].sort()
     .map((month) => ({ month, winners: monthWinners(byMonth.get(month)) }))

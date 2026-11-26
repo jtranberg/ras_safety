@@ -10,10 +10,12 @@ export function pointsForPosition(position) {
 }
 
 // Minutes after midnight in the business timezone.
+const localTimeFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Vancouver", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+
 export function localMinutes(value) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Vancouver", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-  }).formatToParts(new Date(value));
+  const parts = localTimeFormat.formatToParts(new Date(value));
   const part = (type) => Number(parts.find((item) => item.type === type).value);
   return part("hour") * 60 + part("minute");
 }
