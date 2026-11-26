@@ -63,7 +63,7 @@ function StatusUpdate({ report, onSaved }: { report: HazardReport; onSaved: (rep
     try {
       const result = await api<{ report: HazardReport }>(`/hazards/${report._id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status, note }),
+        body: JSON.stringify({ status, previousStatus: report.status, note }),
       });
       onSaved(result.report);
     } catch (err) {
@@ -207,6 +207,7 @@ export default function HazardReports({ mode, sites }: { mode: "worker" | "admin
       });
       form.reset();
       setMessage("Report sent. An admin will review it. You can add photos to it below.");
+      setStatusFilter("");
       refresh();
     } catch (err) {
       setError(errorMessage(err));

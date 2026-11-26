@@ -28,11 +28,13 @@ test('invalid hazard reports are rejected with a reason', () => {
 });
 
 test('status updates accept known statuses and short notes', () => {
-  assert.deepEqual(parseHazardStatus({ status: 'RESOLVED', note: ' Guardrail installed ' }).value,
-    { status: 'RESOLVED', note: 'Guardrail installed' });
-  assert.deepEqual(parseHazardStatus({ status: 'IN_PROGRESS' }).value, { status: 'IN_PROGRESS', note: '' });
-  assert.equal(parseHazardStatus({ status: 'CLOSED' }).error, 'Choose Open, In progress or Resolved.');
-  assert.equal(parseHazardStatus({ status: 'OPEN', note: 'x'.repeat(1001) }).error, 'Note must be no more than 1,000 characters.');
+  assert.deepEqual(parseHazardStatus({ status: 'RESOLVED', previousStatus: 'OPEN', note: ' Guardrail installed ' }).value,
+    { status: 'RESOLVED', previousStatus: 'OPEN', note: 'Guardrail installed' });
+  assert.deepEqual(parseHazardStatus({ status: 'IN_PROGRESS', previousStatus: 'OPEN' }).value,
+    { status: 'IN_PROGRESS', previousStatus: 'OPEN', note: '' });
+  assert.equal(parseHazardStatus({ status: 'CLOSED', previousStatus: 'OPEN' }).error, 'Choose Open, In progress or Resolved.');
+  assert.match(parseHazardStatus({ status: 'OPEN' }).error, /current status/);
+  assert.equal(parseHazardStatus({ status: 'OPEN', previousStatus: 'OPEN', note: 'x'.repeat(1001) }).error, 'Note must be no more than 1,000 characters.');
 });
 
 test('list filters validate status and site', () => {

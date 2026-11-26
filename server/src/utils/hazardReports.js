@@ -39,17 +39,21 @@ export function parseHazardReport(body) {
   };
 }
 
+// `previousStatus` is the status the admin saw, so stale edits can be refused.
 export function parseHazardStatus(body) {
-  const { status, note = "" } = body ?? {};
+  const { status, previousStatus, note = "" } = body ?? {};
 
   if (!HAZARD_STATUSES.includes(status)) {
     return { error: "Choose Open, In progress or Resolved." };
+  }
+  if (!HAZARD_STATUSES.includes(previousStatus)) {
+    return { error: "Missing the report's current status. Refresh and try again." };
   }
   if (typeof note !== "string" || note.trim().length > 1000) {
     return { error: "Note must be no more than 1,000 characters." };
   }
 
-  return { value: { status, note: note.trim() } };
+  return { value: { status, previousStatus, note: note.trim() } };
 }
 
 export function parseHazardFilters(query) {

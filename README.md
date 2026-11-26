@@ -122,7 +122,7 @@ API (any signed-in user unless noted):
 
 - `GET /api/hazards?status=OPEN|IN_PROGRESS|RESOLVED&siteId=` returns `reports` and `counts` (workers get their own reports only).
 - `POST /api/hazards` with `siteId`, `type`, `severity`, `description`, and optional `location`.
-- `PATCH /api/hazards/:id/status` with `status` and optional `note` (admin only).
+- `PATCH /api/hazards/:id/status` with `status`, `previousStatus` (the status the admin saw; a stale value returns 409) and optional `note` (admin only).
 - `GET /api/hazards/:id/photos` and `POST /api/hazards/:id/photos` (multipart `photos`; reporter only, unresolved reports only).
 
 ### User Experience
