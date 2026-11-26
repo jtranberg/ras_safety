@@ -46,7 +46,7 @@ Worker accounts and passwords are explicitly created and set by an administrator
 
 ### Framer Workspace
 
-- Sign in with individual credentials.
+- Sign in with individual credentials. Sign-in requires a valid email address and a password of at least 8 characters, checked in the form and by the API.
 - Select an active job site; the work date is automatically set in the America/Vancouver timezone.
 - Complete the safety checklist and add notes.
 - Attach up to five photos per submission.
@@ -243,7 +243,7 @@ The 7 leaderboard tests cover:
 - Shared ranks for tied records, with ties decided on exact (unrounded) average position.
 - Skipped deleted workers, skipped back- or forward-dated forms, and empty periods.
 
-Latest verified result for this revision: **24 passed, 0 failed** (11 admin helper tests, 7 leaderboard tests, and 6 HTTP regression tests for readiness routing, access boundaries, submission detail responses, and leaderboard sign-in).
+Latest verified result for this revision: **25 passed, 0 failed** (11 admin helper tests, 7 leaderboard tests, and 7 HTTP regression tests for readiness routing, access boundaries, submission detail responses, leaderboard sign-in, and login input validation).
 
 The helper tests do not exercise the live database, photo uploads, or browser interactions. HTTP regression tests use isolated local servers, in-memory sessions, and stubbed model responses where needed; they do not connect to MongoDB or R2.
 
