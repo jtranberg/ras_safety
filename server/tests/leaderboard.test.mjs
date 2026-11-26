@@ -75,3 +75,26 @@ test('forms submitted outside their work day do not score', () => {
   assert.deepEqual(result.leaderboard.map((entry) => entry.name), ['Ana']);
   assert.equal(result.metrics.daysTracked, 1);
 });
+
+test('ties use exact average position, not the rounded value', () => {
+  const fill = [1, 2, 3, 4].map((n) => ({ _id: `507f1f77bcf86cd79943903${n}`, name: `Filler ${n}` }));
+  const [f1, f2, f3, f4] = fill;
+  const day = (date, workers) => workers.map((worker, index) =>
+    at(worker, date, `${date}T${String(14 + index).padStart(2, '0')}:00:00Z`));
+  // Ana finishes 3rd, 4th, 6th (4 points, avg 4.33); Ben 5th, 4th, 4th, 4th (4 points, avg 4.25).
+  // Both averages display as 4.3, but Ben's exact average is better.
+  const result = buildLeaderboard([
+    ...day('2026-10-05', [f1, f2, ana]),
+    ...day('2026-10-06', [f1, f2, f3, ana, ben]),
+    ...day('2026-10-07', [f1, f2, f3, ben, f4, ana]),
+    ...day('2026-10-08', [f1, f2, f3, ben]),
+    ...day('2026-10-09', [f1, f2, f3, ben]),
+  ]);
+  const byName = new Map(result.leaderboard.map((entry) => [entry.name, entry]));
+  const a = byName.get('Ana');
+  const b = byName.get('Ben');
+  assert.equal(a.points, b.points);
+  assert.equal(a.averagePosition, b.averagePosition);
+  assert.equal(b.rank, a.rank - 1);
+  assert.equal('exactAveragePosition' in a, false);
+});

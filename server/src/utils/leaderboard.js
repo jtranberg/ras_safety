@@ -88,6 +88,7 @@ export function buildLeaderboard(submissions) {
       bestStreak = Math.max(bestStreak, run);
     }
     return {
+      exactAveragePosition: record.positionTotal / record.daysResponded,
       workerId: record.workerId,
       name: record.name,
       points: record.points,
@@ -103,16 +104,17 @@ export function buildLeaderboard(submissions) {
       bestStreak,
     };
   }).sort((a, b) => b.points - a.points || b.firstPlace - a.firstPlace
-    || a.averagePosition - b.averagePosition || a.name.localeCompare(b.name));
+    || a.exactAveragePosition - b.exactAveragePosition || a.name.localeCompare(b.name));
 
   let rank = 0;
   ranked.forEach((entry, index) => {
     const previous = ranked[index - 1];
     const tied = previous && previous.points === entry.points && previous.firstPlace === entry.firstPlace
-      && previous.averagePosition === entry.averagePosition;
+      && previous.exactAveragePosition === entry.exactAveragePosition;
     rank = tied ? rank : index + 1;
     entry.rank = rank;
   });
+  for (const entry of ranked) delete entry.exactAveragePosition;
 
   const firstResponses = dailyOrder.map((day) => ({ ...day.responses[0], date: day.date }));
   const earliest = firstResponses.reduce((best, response) => {
