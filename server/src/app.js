@@ -25,9 +25,10 @@ export function createApp({
   const allowedOrigins = new Set([
     "http://localhost:5173",
     "https://ras-safety-authorization.netlify.app",
-    ...(clientOrigin
-      ? [clientOrigin.replace(/\/$/, "")]
-      : []),
+    ...(clientOrigin || "")
+      .split(",")
+      .map((origin) => origin.trim().replace(/\/$/, ""))
+      .filter(Boolean),
   ]);
 
   app.use(

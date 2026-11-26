@@ -168,6 +168,25 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+### Remote Dev Preview (e.g. Devin)
+
+When the frontend is opened through a remote preview URL instead of `localhost`, route API calls through the Vite dev server so requests and the session cookie stay same-origin:
+
+```env
+# client/.env
+VITE_API_URL=/api
+VITE_ALLOWED_HOSTS=.preview.devinapps.com
+```
+
+Then add the preview origin to the server's comma-separated `CLIENT_ORIGIN` and restart the API:
+
+```env
+# server/.env
+CLIENT_ORIGIN=http://localhost:5173,https://YOUR-PREVIEW.preview.devinapps.com
+```
+
+The Vite proxy forwards `/api` to `http://localhost:3000` (override with `VITE_API_PROXY_TARGET`).
+
 ### First Admin Account
 
 For a fresh database, temporarily set `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `server/.env`, then run from the server directory:
