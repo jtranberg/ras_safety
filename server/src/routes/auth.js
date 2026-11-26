@@ -10,6 +10,9 @@ import {
 
 const router = Router();
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
@@ -45,14 +48,21 @@ router.post("/login", loginLimiter, async (req, res, next) => {
 
     if (
       typeof email !== "string" ||
-      typeof password !== "string" ||
-      email.length > 254 ||
-      password.length > 128 ||
-      !email.trim() ||
-      !password
+      email.trim().length > 254 ||
+      !EMAIL_PATTERN.test(email.trim())
     ) {
       return res.status(400).json({
-        message: "Enter a valid email and password.",
+        message: "Enter a valid email address.",
+      });
+    }
+
+    if (
+      typeof password !== "string" ||
+      password.trim().length < MIN_PASSWORD_LENGTH ||
+      password.length > 128
+    ) {
+      return res.status(400).json({
+        message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
       });
     }
 
@@ -289,7 +299,7 @@ router.post(
         name.trim().length > 100 ||
         typeof email !== "string" ||
         email.trim().length > 254 ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+        !EMAIL_PATTERN.test(email.trim()) ||
         typeof password !== "string" ||
         password.trim().length < 8 ||
         Buffer.byteLength(password, "utf8") > 72

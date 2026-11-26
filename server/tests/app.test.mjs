@@ -119,3 +119,31 @@ test('reopened submission details include authorization and revocation names', a
     assert.equal(submission.revokedBy.name, 'Revoking Admin');
   });
 });
+
+test('leaderboard requires sign-in', async () => {
+  await withServer(isolatedApp(), async (base) => {
+    const response = await fetch(`${base}/api/submissions/leaderboard`);
+    assert.equal(response.status, 401);
+  });
+});
+
+test('login rejects invalid emails and short passwords before checking accounts', async () => {
+  await withServer(isolatedApp(), async (base) => {
+    const cases = [
+      [{ email: 'not-an-email', password: 'long-enough-password' }, 'Enter a valid email address.'],
+      [{ email: 'name@domain', password: 'long-enough-password' }, 'Enter a valid email address.'],
+      [{ password: 'long-enough-password' }, 'Enter a valid email address.'],
+      [{ email: 'worker@example.com', password: 'short7c' }, 'Password must be at least 8 characters.'],
+      [{ email: 'worker@example.com', password: '   abc   ' }, 'Password must be at least 8 characters.'],
+    ];
+    for (const [body, message] of cases) {
+      const response = await fetch(`${base}/api/auth/login`, {
+        method: 'POST',
+        headers: { origin: 'http://localhost:5173', 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      assert.equal(response.status, 400, JSON.stringify(body));
+      assert.equal((await response.json()).message, message);
+    }
+  });
+});

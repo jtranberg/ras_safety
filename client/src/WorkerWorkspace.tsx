@@ -3,6 +3,8 @@ import type { FormEvent } from "react";
 import { api, ApiError } from "./api";
 import type { User } from "./api";
 import PhotoPanel from "./PhotoPanel";
+import Leaderboard from "./Leaderboard";
+import type { LeaderboardPeriod } from "./Leaderboard";
 
 type Site = {
   _id: string;
@@ -62,6 +64,7 @@ export default function WorkerWorkspace({ user }: { user: User }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<LeaderboardPeriod>("7");
 
   useEffect(() => {
     let active = true;
@@ -305,6 +308,13 @@ export default function WorkerWorkspace({ user }: { user: User }) {
           </div>
         )}
       </section>
+
+      <Leaderboard
+        period={leaderboardPeriod}
+        onPeriodChange={setLeaderboardPeriod}
+        refreshKey={submissions.length}
+        currentWorkerId={user.id}
+      />
     </div>
   );
 }

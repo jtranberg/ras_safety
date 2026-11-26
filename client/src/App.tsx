@@ -8,6 +8,9 @@ import AdminWorkspace from "./AdminWorkspace";
 import FooterCredit from "./FooterCredit";
 import { CookieNotice, PrivacyPolicy } from "./Privacy";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
 function splashWasSeen() {
   try {
     return sessionStorage.getItem("ras-splash-seen") === "true";
@@ -74,15 +77,22 @@ export default function App() {
     event.preventDefault();
     if (busy) return;
     const data = new FormData(event.currentTarget);
+    const email = String(data.get("email") ?? "").trim();
+    const password = String(data.get("password") ?? "");
+    if (!EMAIL_PATTERN.test(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (password.trim().length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
     setError("");
     setBusy(true);
     try {
       const result = await api<{ user: User }>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({
-          email: String(data.get("email") ?? "").trim(),
-          password: String(data.get("password") ?? ""),
-        }),
+        body: JSON.stringify({ email, password }),
       });
       setUser(result.user);
       setShowLoginPassword(false);
@@ -174,6 +184,7 @@ export default function App() {
                     type={showLoginPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
+                    minLength={MIN_PASSWORD_LENGTH}
                     disabled={busy}
                   />
                 </label>

@@ -4,6 +4,7 @@ import Submission from "../models/Submission.js";
 import User from "../models/User.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { businessDate, parseAdminFilters, csvHeader, csvSubmission } from "../utils/adminSubmissionHelpers.js";
+import { buildLeaderboard } from "../utils/leaderboard.js";
 
 const router = Router();
 
@@ -77,6 +78,24 @@ router.get("/admin-dashboard", requireAuth, requireRole("ADMIN"), async (req, re
         missingWorkers,
       },
     });
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ message: error.message });
+    next(error);
+  }
+});
+
+// Response leaderboard: available to every signed-in user so crews can see
+// who responded first. Only names and submission times are returned.
+router.get("/leaderboard", requireAuth, async (req, res, next) => {
+  try {
+    const { siteId, from, to } = parseAdminFilters(req.query);
+    const { base } = matches({ siteId, from, to });
+    const submissions = await Submission.find(base)
+      .select("worker workDate createdAt")
+      .populate("worker", "name")
+      .lean();
+    res.set("Cache-Control", "no-store");
+    res.json({ from, to, ...buildLeaderboard(submissions) });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
     next(error);

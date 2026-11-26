@@ -46,11 +46,12 @@ Worker accounts and passwords are explicitly created and set by an administrator
 
 ### Framer Workspace
 
-- Sign in with individual credentials.
+- Sign in with individual credentials. Sign-in requires a valid email address and a password of at least 8 characters, checked in the form and by the API.
 - Select an active job site; the work date is automatically set in the America/Vancouver timezone.
 - Complete the safety checklist and add notes.
 - Attach up to five photos per submission.
 - View their own submissions and photos.
+- See the safety response leaderboard, with their own rank, points, and streak highlighted.
 
 Worker identity comes from the authenticated account. The backend restricts workers to their own submissions and photo access.
 
@@ -68,6 +69,23 @@ Worker identity comes from the authenticated account. The backend restricts work
 - Prepare an email draft with the worker's login details after successful account creation or password reset.
 - Add job sites with an optional address.
 - Edit existing job-site names and addresses.
+
+### Safety Response Leaderboard
+
+Gamifies the daily safety form by ranking who responds first. It appears on the Admin dashboard and in the Framer workspace.
+
+- **Daily response order:** each work day, workers are ordered by when they submitted their first form. Only a worker's first form per work day counts, and only if it was submitted on that work day (BC time), so back- or forward-dated forms do not score.
+- **Points:** 1st = 5, 2nd = 3, 3rd = 2, and every other response = 1, so consistency counts as well as speed.
+- **Rankings:** sorted by points, then first-place finishes, then average position. Workers with identical records share a rank.
+- **Per-worker metrics:** points, 1st/2nd/3rd finishes, days responded, participation rate, average position, average and fastest response time, and current and best streak.
+- **Team metrics:** days tracked, total responses, average responses per day, average first-response time, and the earliest response of the period.
+- **Podium:** the 1st, 2nd, and 3rd responders for the latest day in the period, followed by everyone else in order.
+- **Awards:** Early Bird (most first-place finishes), Streak leader (longest current streak), and Most consistent (highest participation).
+- **Periods:** Today, Last 7 days, Last 30 days, or All time. On the Admin dashboard, the leaderboard follows the applied site filter.
+
+Times are shown in BC time (America/Vancouver). Participation and streaks count only tracked days, meaning days on which at least one form was submitted. Deleted worker accounts are left out of the leaderboard.
+
+API: `GET /api/submissions/leaderboard?siteId=&from=YYYY-MM-DD&to=YYYY-MM-DD` (any signed-in user; all parameters are optional). It returns `leaderboard`, `metrics`, and `latestDay`. The ranking logic is in `server/src/utils/leaderboard.js`.
 
 ### User Experience
 
@@ -150,6 +168,25 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+### Remote Dev Preview (e.g. Devin)
+
+When the frontend is opened through a remote preview URL instead of `localhost`, route API calls through the Vite dev server so requests and the session cookie stay same-origin:
+
+```env
+# client/.env
+VITE_API_URL=/api
+VITE_ALLOWED_HOSTS=.preview.devinapps.com
+```
+
+Then add the preview origin to the server's comma-separated `CLIENT_ORIGIN` and restart the API:
+
+```env
+# server/.env
+CLIENT_ORIGIN=http://localhost:5173,https://YOUR-PREVIEW.preview.devinapps.com
+```
+
+The Vite proxy forwards `/api` to `http://localhost:3000` (override with `VITE_API_PROXY_TARGET`).
+
 ### First Admin Account
 
 For a fresh database, temporarily set `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `server/.env`, then run from the server directory:
@@ -188,7 +225,7 @@ From the `server` directory:
 npm test
 ```
 
-The 11 automated helper tests cover:
+The 11 automated admin helper tests cover:
 
 - BC work-date boundaries, including daylight saving time.
 - Valid filters and rejection of malformed IDs, dates, arrays, and objects.
@@ -198,7 +235,15 @@ The 11 automated helper tests cover:
 - Photo counts and exclusion of secret metadata.
 - Older checklist answers that were not recorded.
 
-Latest verified result for this revision: **16 passed, 0 failed** (11 helper tests and 5 HTTP regression tests for readiness routing, access boundaries, and submission detail responses).
+The 7 leaderboard tests cover:
+
+- Position points and BC response times across daylight saving changes.
+- Daily response order, ignoring repeat forms on the same day.
+- Rankings, podium counts, participation, average position, streaks, and team metrics.
+- Shared ranks for tied records, with ties decided on exact (unrounded) average position.
+- Skipped deleted workers, skipped back- or forward-dated forms, and empty periods.
+
+Latest verified result for this revision: **25 passed, 0 failed** (11 admin helper tests, 7 leaderboard tests, and 7 HTTP regression tests for readiness routing, access boundaries, submission detail responses, leaderboard sign-in, and login input validation).
 
 The helper tests do not exercise the live database, photo uploads, or browser interactions. HTTP regression tests use isolated local servers, in-memory sessions, and stubbed model responses where needed; they do not connect to MongoDB or R2.
 
@@ -241,6 +286,7 @@ Backend authorization enforces:
 - Framers can create submissions only for their authenticated account.
 - Framers can read only their own submissions and request their own photo URLs.
 - Admins can view all submissions and manage workers and sites.
+- Any signed-in user can view the response leaderboard. It shows only worker names, ranks, metrics, and submission times; it does not show checklist answers, notes, or photos.
 - Password changes and access revocation invalidate older sessions on their next protected request.
 - Deleted accounts cannot authenticate or use protected routes.
 
@@ -293,6 +339,7 @@ Photos are embedded documents, not a separate MongoDB collection. User and site 
 - Saving a new worker password also restores access.
 - Deleting a worker retains their submissions, but the dashboard displays “Unavailable worker” when the referenced account no longer exists.
 - The list displays up to 100 matching submissions.
+- The leaderboard treats the daily safety form as the safety letter. "First to respond" is decided by submission time within each work day.
 - Summary totals include all matching submissions, beyond the list limit.
 - Filters take effect when Apply filters is selected.
 - Refresh dashboard reloads submissions and filter options.
