@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { api, ApiError } from "./api";
 import type { User } from "./api";
 import PhotoPanel from "./PhotoPanel";
+import HazardReports from "./HazardReports";
 import Leaderboard from "./Leaderboard";
 import type { LeaderboardPeriod } from "./Leaderboard";
 
@@ -308,6 +309,8 @@ export default function WorkerWorkspace({ user }: { user: User }) {
           </div>
         )}
       </section>
+
+      <HazardReports mode="worker" sites={sites} />
 
       <Leaderboard
         period={leaderboardPeriod}

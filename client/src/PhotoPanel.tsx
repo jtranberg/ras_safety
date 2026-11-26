@@ -25,11 +25,16 @@ function errorMessage(error: unknown) {
 
 export default function PhotoPanel({
   submissionId,
+  photosPath,
   canUpload = false,
+  itemLabel = "form",
 }: {
-  submissionId: string;
+  submissionId?: string;
+  photosPath?: string;
   canUpload?: boolean;
+  itemLabel?: string;
 }) {
+  const path = photosPath ?? `/submissions/${submissionId}/photos`;
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -48,7 +53,7 @@ export default function PhotoPanel({
     async function load() {
       try {
         const result = await api<{ photos: Photo[] }>(
-          `/submissions/${submissionId}/photos`
+          path
         );
 
         if (active) {
@@ -67,11 +72,11 @@ export default function PhotoPanel({
     return () => {
       active = false;
     };
-  }, [submissionId]);
+  }, [path]);
 
   async function refreshPhotos() {
     const result = await api<{ photos: Photo[] }>(
-      `/submissions/${submissionId}/photos`
+      path
     );
 
     setPhotos(result.photos);
@@ -103,7 +108,7 @@ export default function PhotoPanel({
       setError(
         `You can attach ${remaining} more ${
           remaining === 1 ? "photo" : "photos"
-        } to this form.`
+        } to this ${itemLabel}.`
       );
       return;
     }
@@ -121,7 +126,7 @@ export default function PhotoPanel({
     setAction("upload");
 
     try {
-      await api(`/submissions/${submissionId}/photos`, {
+      await api(path, {
         method: "POST",
         body: data,
       });
@@ -256,7 +261,7 @@ export default function PhotoPanel({
 
           {loaded && remaining === 0 && (
             <p className="muted">
-              This form has reached its five-photo limit.
+              This {itemLabel} has reached its five-photo limit.
             </p>
           )}
         </>

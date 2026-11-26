@@ -5,6 +5,7 @@ import PhotoPanel from "./PhotoPanel";
 import WorkerAccessPanel from "./WorkerAccessPanel";
 import SiteManagementPanel from "./SiteManagementPanel";
 import Leaderboard from "./Leaderboard";
+import HazardReports from "./HazardReports";
 import type { LeaderboardPeriod } from "./Leaderboard";
 import "./AdminSummary.css";
 const checks = [
@@ -704,6 +705,7 @@ export default function AdminWorkspace() {
           )}
         </section>
       )}
+      {!selected && <HazardReports mode="admin" sites={siteOptions} />}
       {!selected && (
         <section className="ras-management-section" aria-labelledby="management-heading">
           <div className="ras-management-heading">

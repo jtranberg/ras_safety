@@ -52,6 +52,7 @@ Worker accounts and passwords are explicitly created and set by an administrator
 - Attach up to five photos per submission.
 - View their own submissions and photos.
 - See the safety response leaderboard, with their own rank, points, and streak highlighted.
+- Report a hazard or near miss at any time, add photos, and follow its status and the admin's note.
 
 Worker identity comes from the authenticated account. The backend restricts workers to their own submissions and photo access.
 
@@ -69,6 +70,7 @@ Worker identity comes from the authenticated account. The backend restricts work
 - Prepare an email draft with the worker's login details after successful account creation or password reset.
 - Add job sites with an optional address.
 - Edit existing job-site names and addresses.
+- Review hazard and near-miss reports, filter them by status and site, and move each from Open to In progress to Resolved with a note.
 
 ### Safety Response Leaderboard
 
@@ -86,6 +88,21 @@ Gamifies the daily safety form by ranking who responds first. It appears on the 
 Times are shown in BC time (America/Vancouver). Participation and streaks count only tracked days, meaning days on which at least one form was submitted. Deleted worker accounts are left out of the leaderboard.
 
 API: `GET /api/submissions/leaderboard?siteId=&from=YYYY-MM-DD&to=YYYY-MM-DD` (any signed-in user; all parameters are optional). It returns `leaderboard`, `metrics`, and `latestDay`. The ranking logic is in `server/src/utils/leaderboard.js`.
+
+### Hazard and Near-Miss Reports
+
+Any signed-in worker can report a hazard or near miss at any time, separately from the daily form.
+
+- **Report:** type (Hazard or Near miss), severity (Low, Medium, High), job site, optional location on site, a description, and up to five photos.
+- **Workers** see only their own reports, with the current status and any admin note. Photos can be added until a report is resolved.
+- **Admins** see every report, newest first, with counts per status and filters for status and site. Each report can be set to Open, In progress, or Resolved with a note; who changed it and when is recorded.
+
+API (any signed-in user unless noted):
+
+- `GET /api/hazards?status=OPEN|IN_PROGRESS|RESOLVED&siteId=` returns `reports` and `counts` (workers get their own reports only).
+- `POST /api/hazards` with `siteId`, `type`, `severity`, `description`, and optional `location`.
+- `PATCH /api/hazards/:id/status` with `status`, `previousStatus` (the status the admin saw; a stale value returns 409) and optional `note` (admin only).
+- `GET /api/hazards/:id/photos` and `POST /api/hazards/:id/photos` (multipart `photos`; reporter only, unresolved reports only).
 
 ### User Experience
 
@@ -302,13 +319,13 @@ The newly entered password is retained temporarily in React state for this actio
 
 ## Photo Handling
 
-- Maximum five photos per submission.
+- Maximum five photos per submission or hazard report.
 - Maximum 5 MB per uploaded file.
 - Accepts valid, non-animated JPEG, PNG, and WebP images.
 - Sharp decodes image content rather than trusting filenames.
 - Images are rotated using orientation metadata, resized to fit within 2000 × 2000 pixels, and converted to WebP.
 - Image bytes are stored in R2.
-- Photo metadata is embedded in the MongoDB submission.
+- Photo metadata is embedded in the MongoDB submission or hazard report.
 - Read URLs are generated when requested and expire after five minutes.
 
 ## Entity-Relationship Diagram
@@ -321,6 +338,7 @@ The newly entered password is retained temporarily in React state for this actio
 - **Site:** name, optional address, and active status.
 - **Submission:** worker/site references, work date, checklist, notes, status, authorization details, and embedded photo metadata.
 - **Checklist:** embedded Boolean answers; the original five fields are always required, and the thirteen additional fields are required for new submissions.
+- **HazardReport:** reporter/site references, type, severity, location, description, status, admin note, who last changed the status and when, resolution time, and embedded photo metadata.
 - **Photo:** embedded identifier, R2 object key, original filename, content type, size, and timestamps.
 
 One worker and one site can each have many submissions. Each submission contains one checklist and up to five photos through the upload API.
