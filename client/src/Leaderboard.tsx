@@ -37,7 +37,8 @@ type LeaderboardResult = {
   };
   latestDay: { date: string; responses: DayResponse[] } | null;
 };
-type Period = "today" | "7" | "30" | "all";
+export type LeaderboardPeriod = "today" | "7" | "30" | "all";
+type Period = LeaderboardPeriod;
 
 const periods: [Period, string][] = [
   ["today", "Today"],
@@ -87,16 +88,22 @@ function leader(entries: LeaderboardEntry[], score: (entry: LeaderboardEntry) =>
   return best && score(best) > 0 ? best : null;
 }
 
+// The parent owns the period so it survives dashboard reloads and remounts.
 export default function Leaderboard({
+  period,
+  onPeriodChange,
+  refreshKey,
   siteId,
   siteName,
   currentWorkerId,
 }: {
+  period: Period;
+  onPeriodChange: (period: Period) => void;
+  refreshKey?: number;
   siteId?: string;
   siteName?: string;
   currentWorkerId?: string;
 }) {
-  const [period, setPeriod] = useState<Period>("7");
   const [data, setData] = useState<LeaderboardResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -115,12 +122,12 @@ export default function Leaderboard({
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [period, siteId, reload]);
+  }, [period, siteId, reload, refreshKey]);
 
   function choose(next: Period) {
     if (next === period) return;
     setLoading(true);
-    setPeriod(next);
+    onPeriodChange(next);
   }
 
   const entries = data?.leaderboard ?? [];

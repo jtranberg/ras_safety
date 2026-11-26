@@ -5,6 +5,7 @@ import PhotoPanel from "./PhotoPanel";
 import WorkerAccessPanel from "./WorkerAccessPanel";
 import SiteManagementPanel from "./SiteManagementPanel";
 import Leaderboard from "./Leaderboard";
+import type { LeaderboardPeriod } from "./Leaderboard";
 import "./AdminSummary.css";
 const checks = [
   ["ppe", "Required PPE worn"],
@@ -164,6 +165,7 @@ export default function AdminWorkspace() {
   const [matchingTotal, setMatchingTotal] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [notice, setNotice] = useState("");
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<LeaderboardPeriod>("7");
   const chartSites = [...summary.sites].sort(
     (a, b) => b.total - a.total || a.name.localeCompare(b.name)
   );
@@ -649,6 +651,8 @@ export default function AdminWorkspace() {
                 </section>
               )}
               <Leaderboard
+                period={leaderboardPeriod}
+                onPeriodChange={setLeaderboardPeriod}
                 siteId={appliedFilters.siteId || undefined}
                 siteName={siteOptions.find((site) => site._id === appliedFilters.siteId)?.name}
               />
