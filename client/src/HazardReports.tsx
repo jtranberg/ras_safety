@@ -207,6 +207,7 @@ export default function HazardReports({ mode, sites }: { mode: "worker" | "admin
       });
       form.reset();
       setMessage("Report sent. An admin will review it. You can add photos to it below.");
+      setStatusFilter("");
       refresh();
     } catch (err) {
       setError(errorMessage(err));
