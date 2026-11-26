@@ -1,5 +1,7 @@
 // Points for the daily response order. Every on-time response earns at least
 // the participation point, so consistency is rewarded as well as speed.
+import { businessDate } from "./adminSubmissionHelpers.js";
+
 export const POSITION_POINTS = [5, 3, 2];
 export const PARTICIPATION_POINTS = 1;
 
@@ -29,6 +31,9 @@ export function buildLeaderboard(submissions) {
     const worker = submission.worker;
     const submittedAt = new Date(submission.createdAt);
     if (!worker?._id || !submission.workDate || !Number.isFinite(submittedAt.valueOf())) continue;
+    // Work dates are chosen by the client; only forms submitted on their own
+    // work day (BC time) can compete, so back- or forward-dated forms score nothing.
+    if (businessDate(submittedAt) !== submission.workDate) continue;
     const workerId = String(worker._id);
     const day = days.get(submission.workDate) ?? new Map();
     const previous = day.get(workerId);

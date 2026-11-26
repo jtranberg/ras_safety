@@ -64,3 +64,14 @@ test('empty periods return empty metrics', () => {
   assert.equal(result.metrics.earliestResponse, null);
   assert.equal(result.latestDay, null);
 });
+
+test('forms submitted outside their work day do not score', () => {
+  const result = buildLeaderboard([
+    at(ana, '2026-10-05', '2026-10-05T15:00:00Z'),
+    // Backdated to an empty day, and forward-dated to the next day.
+    at(ben, '2026-10-04', '2026-10-05T14:00:00Z'),
+    at(cy, '2026-10-06', '2026-10-05T14:30:00Z'),
+  ]);
+  assert.deepEqual(result.leaderboard.map((entry) => entry.name), ['Ana']);
+  assert.equal(result.metrics.daysTracked, 1);
+});
