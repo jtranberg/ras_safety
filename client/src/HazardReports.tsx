@@ -63,7 +63,7 @@ function StatusUpdate({ report, onSaved }: { report: HazardReport; onSaved: (rep
     try {
       const result = await api<{ report: HazardReport }>(`/hazards/${report._id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status, note }),
+        body: JSON.stringify({ status, previousStatus: report.status, note }),
       });
       onSaved(result.report);
     } catch (err) {

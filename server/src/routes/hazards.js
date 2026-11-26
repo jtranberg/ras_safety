@@ -100,25 +100,31 @@ router.patch("/:id/status", requireRole("ADMIN"), async (req, res, next) => {
     const parsed = parseHazardStatus(req.body);
     if (parsed.error) return res.status(400).json({ message: parsed.error });
 
-    const { status, note } = parsed.value;
+    const { status, previousStatus, note } = parsed.value;
     const now = new Date();
+    const update = {
+      status,
+      adminNote: note,
+      statusUpdatedBy: req.user._id,
+      statusUpdatedAt: now,
+    };
+    // Keep the original resolution time when only the note changes.
+    if (status !== previousStatus) update.resolvedAt = status === "RESOLVED" ? now : null;
+
     const report = await withNames(
-      HazardReport.findByIdAndUpdate(
-        req.params.id,
-        {
-          $set: {
-            status,
-            adminNote: note,
-            statusUpdatedBy: req.user._id,
-            statusUpdatedAt: now,
-            resolvedAt: status === "RESOLVED" ? now : null,
-          },
-        },
+      HazardReport.findOneAndUpdate(
+        { _id: req.params.id, status: previousStatus },
+        { $set: update },
         { returnDocument: "after", runValidators: true },
       ),
     ).lean();
 
-    if (!report) return res.status(404).json({ message: "Hazard report not found." });
+    if (!report) {
+      const exists = await HazardReport.exists({ _id: req.params.id });
+      return exists
+        ? res.status(409).json({ message: "This report was updated by someone else. Refresh to see the latest status." })
+        : res.status(404).json({ message: "Hazard report not found." });
+    }
 
     res.json({ report: publicHazardReport(report) });
   } catch (error) {
