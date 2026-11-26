@@ -19,10 +19,13 @@ export const EXPORT_CHECKS = [
   ["taskCommunication", "Work tasks and hazards communicated to the crew"],
 ];
 
+// Formatters are costly to construct; leaderboards call these per submission.
+const businessDateFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Vancouver", year: "numeric", month: "2-digit", day: "2-digit",
+});
+
 export function businessDate(now = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Vancouver", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(now);
+  const parts = businessDateFormat.formatToParts(now);
   const part = (type) => parts.find((item) => item.type === type).value;
   return `${part("year")}-${part("month")}-${part("day")}`;
 }

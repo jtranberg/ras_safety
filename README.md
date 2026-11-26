@@ -53,6 +53,7 @@ Worker accounts and passwords are explicitly created and set by an administrator
 - View their own submissions and photos.
 - See the safety response leaderboard, with their own rank, points, and streak highlighted.
 - Report a hazard or near miss at any time, add photos, and follow its status and the admin's note.
+- See their earned and locked badges, with progress toward each.
 
 Worker identity comes from the authenticated account. The backend restricts workers to their own submissions and photo access.
 
@@ -70,6 +71,7 @@ Worker identity comes from the authenticated account. The backend restricts work
 - Prepare an email draft with the worker's login details after successful account creation or password reset.
 - Add job sites with an optional address.
 - Edit existing job-site names and addresses.
+- See every active worker's badges.
 - Review hazard and near-miss reports, filter them by status and site, and move each from Open to In progress to Resolved with a note.
 
 ### Safety Response Leaderboard
@@ -88,6 +90,25 @@ Gamifies the daily safety form by ranking who responds first. It appears on the 
 Times are shown in BC time (America/Vancouver). Participation and streaks count only tracked days, meaning days on which at least one form was submitted. Deleted worker accounts are left out of the leaderboard.
 
 API: `GET /api/submissions/leaderboard?siteId=&from=YYYY-MM-DD&to=YYYY-MM-DD` (any signed-in user; all parameters are optional). It returns `leaderboard`, `metrics`, and `latestDay`. The ranking logic is in `server/src/utils/leaderboard.js`.
+
+### Badges and Monthly Champion
+
+Badges are worked out from existing forms and hazard reports each time they are viewed, so nothing extra is stored.
+
+| Badge | Earned by |
+| --- | --- |
+| First Form | Submitting a first safety form |
+| 10 / 30 / 100 Forms | Submitting 10, 30 or 100 safety forms |
+| 5-Day / 10-Day Streak | Responding on time 5 or 10 tracked days in a row (all-time best streak) |
+| First Responder | Being first to submit the safety form on 10 days |
+| Hazard Spotter | Reporting a hazard or near miss |
+| Monthly Champion | Finishing a month with the most leaderboard points |
+
+- **Monthly champion:** the worker with the most leaderboard points in the previous calendar month (BC time, all sites). Ties share the title. They are shown in a banner and with a crown in the leaderboard table.
+- **Workers** see their own earned and locked badges with progress; **admins** see a table of every active worker's badges and can open anyone's full badge list.
+- Streaks, first places and the champion use the same on-time scoring rules as the leaderboard.
+
+API: `GET /api/submissions/badges` (any signed-in user; framers receive only their own badges) returns `monthlyChampion` and `workers`. The leaderboard response also includes `monthlyChampion`. The logic is in `server/src/utils/badges.js`.
 
 ### Hazard and Near-Miss Reports
 

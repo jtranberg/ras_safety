@@ -4,7 +4,9 @@ import Submission from "../models/Submission.js";
 import User from "../models/User.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { businessDate, parseAdminFilters, csvHeader, csvSubmission } from "../utils/adminSubmissionHelpers.js";
+import HazardReport from "../models/HazardReport.js";
 import { buildLeaderboard } from "../utils/leaderboard.js";
+import { buildBadges, monthRange, monthWinners, previousMonth } from "../utils/badges.js";
 
 const router = Router();
 
@@ -84,20 +86,51 @@ router.get("/admin-dashboard", requireAuth, requireRole("ADMIN"), async (req, re
   }
 });
 
+function leaderboardSubmissions(filter) {
+  return Submission.find(filter).select("worker workDate createdAt").populate("worker", "name").lean();
+}
+
+// Last month's champion across all sites, regardless of the board's filters.
+async function lastMonthChampion() {
+  const month = previousMonth(businessDate());
+  const { from, to } = monthRange(month);
+  const winners = monthWinners(await leaderboardSubmissions({ workDate: { $gte: from, $lte: to } }));
+  return winners.length ? { month, winners } : null;
+}
+
 // Response leaderboard: available to every signed-in user so crews can see
 // who responded first. Only names and submission times are returned.
 router.get("/leaderboard", requireAuth, async (req, res, next) => {
   try {
     const { siteId, from, to } = parseAdminFilters(req.query);
     const { base } = matches({ siteId, from, to });
-    const submissions = await Submission.find(base)
-      .select("worker workDate createdAt")
-      .populate("worker", "name")
-      .lean();
+    const [submissions, monthlyChampion] = await Promise.all([
+      leaderboardSubmissions(base),
+      lastMonthChampion(),
+    ]);
     res.set("Cache-Control", "no-store");
-    res.json({ from, to, ...buildLeaderboard(submissions) });
+    res.json({ from, to, ...buildLeaderboard(submissions), monthlyChampion });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
+    next(error);
+  }
+});
+
+// Admins see every active worker's badges; framers see only their own.
+router.get("/badges", requireAuth, async (req, res, next) => {
+  try {
+    const isAdmin = req.user.role === "ADMIN";
+    const [workers, submissions, hazardTotals] = await Promise.all([
+      isAdmin
+        ? User.find({ role: "FRAMER", isActive: { $ne: false } }).select("name").lean()
+        : Promise.resolve([{ _id: req.user._id, name: req.user.name }]),
+      leaderboardSubmissions({}),
+      HazardReport.aggregate([{ $group: { _id: "$reporter", count: { $sum: 1 } } }]),
+    ]);
+    const hazardCounts = new Map(hazardTotals.map(({ _id, count }) => [String(_id), count]));
+    res.set("Cache-Control", "no-store");
+    res.json(buildBadges({ workers, submissions, hazardCounts, today: businessDate() }));
+  } catch (error) {
     next(error);
   }
 });

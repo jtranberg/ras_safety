@@ -4,6 +4,7 @@ import { api, ApiError } from "./api";
 import type { User } from "./api";
 import PhotoPanel from "./PhotoPanel";
 import HazardReports from "./HazardReports";
+import Badges from "./Badges";
 import Leaderboard from "./Leaderboard";
 import type { LeaderboardPeriod } from "./Leaderboard";
 
@@ -318,6 +319,8 @@ export default function WorkerWorkspace({ user }: { user: User }) {
         refreshKey={submissions.length}
         currentWorkerId={user.id}
       />
+
+      <Badges mode="worker" refreshKey={submissions.length} />
     </div>
   );
 }
