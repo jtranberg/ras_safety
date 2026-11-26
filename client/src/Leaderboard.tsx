@@ -168,7 +168,7 @@ export default function Leaderboard({
         <>
           {mine && (
             <p className="ras-my-rank" role="status">
-              You are <strong>#{mine.rank}</strong> of {entries.length} with <strong>{mine.points}</strong> points
+              You are <strong>#{mine.rank}</strong> of {entries.length} with <strong>{mine.points}</strong> {mine.points === 1 ? "point" : "points"}
               {mine.currentStreak > 1 ? ` and a ${mine.currentStreak}-day streak` : ""}.
             </p>
           )}
