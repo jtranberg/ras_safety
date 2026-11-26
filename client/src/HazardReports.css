@@ -1,0 +1,32 @@
+.ras-hazard-form { margin-bottom: 20px; }
+.ras-hazard-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin: 8px 0 16px; }
+.ras-hazard-toolbar .ras-period-tabs { margin: 0; }
+.ras-hazard-toolbar-actions { display: flex; align-items: flex-end; gap: 10px; }
+.ras-hazard-toolbar-actions label { display: grid; gap: 4px; font-size: 13px; font-weight: 700; }
+.ras-hazard-list { display: grid; gap: 12px; }
+.ras-hazard-card { display: grid; gap: 10px; min-width: 0; padding: 16px; border: 1px solid #dce1e7; border-left: 5px solid #9aa5b1; border-radius: 10px; }
+.ras-hazard-card.ras-hazard-high { border-left-color: #b42318; }
+.ras-hazard-card.ras-hazard-medium { border-left-color: #d97706; }
+.ras-hazard-card.ras-hazard-low { border-left-color: #2f855a; }
+.ras-hazard-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ras-hazard-card-header p { margin: 4px 0 0; }
+.ras-hazard-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ras-severity { border-radius: 20px; padding: 7px 12px; font-size: 12px; font-weight: 700; }
+.ras-severity-high { background: #fde8e7; color: #9b1c1c; }
+.ras-severity-medium { background: #fdf0dc; color: #8a4b05; }
+.ras-severity-low { background: #e4f2e8; color: #24633f; }
+.badge.ras-hazard-state-open { background: #fde8e7; color: #9b1c1c; }
+.badge.ras-hazard-state-in_progress { background: #fdf0dc; color: #8a4b05; }
+.badge.ras-hazard-state-resolved { background: #d9eee2; color: #175c36; }
+.ras-hazard-description { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ras-hazard-note { margin: 0; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ras-hazard-status-form { display: grid; grid-template-columns: minmax(140px, 200px) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.ras-hazard-status-form label { display: grid; gap: 4px; font-size: 13px; font-weight: 700; }
+.ras-hazard-status-form .error { grid-column: 1 / -1; margin: 0; }
+.ras-hazard-card > .secondary { justify-self: start; }
+
+@media (max-width: 650px) {
+  .ras-hazard-card-header { flex-direction: column; }
+  .ras-hazard-badges { justify-content: flex-start; }
+  .ras-hazard-status-form { grid-template-columns: minmax(0, 1fr); }
+}

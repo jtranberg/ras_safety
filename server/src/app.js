@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.js";
 import safetyRoutes from "./routes/safety.js";
 import photoRoutes from "./routes/photos.js";
 import adminSubmissionRoutes from "./routes/adminSubmissionRoutes.js";
+import hazardRoutes from "./routes/hazards.js";
 
 // Keep app construction separate from database connection and listening.
 // Tests can use an in-memory session store without production credentials.
@@ -93,6 +94,7 @@ export function createApp({
 
   app.use("/api/auth", authRoutes);
   app.use("/api/submissions", adminSubmissionRoutes);
+  app.use("/api/hazards", hazardRoutes);
   app.use("/api", photoRoutes);
   app.use("/api", safetyRoutes);
 

@@ -71,7 +71,7 @@ const checklistSchema = new mongoose.Schema(
   { _id: false },
 );
 
-const photoSchema = new mongoose.Schema(
+export const photoSchema = new mongoose.Schema(
   {
     // Identifies the photo in object storage.
     objectKey: { type: String, required: true },

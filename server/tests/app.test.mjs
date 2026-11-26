@@ -147,3 +147,12 @@ test('login rejects invalid emails and short passwords before checking accounts'
     }
   });
 });
+
+test('hazard reports require sign-in', async () => {
+  await withServer(isolatedApp(), async (base) => {
+    for (const path of ['/api/hazards', '/api/hazards/507f1f77bcf86cd799439011/photos']) {
+      const response = await fetch(`${base}${path}`);
+      assert.equal(response.status, 401, path);
+    }
+  });
+});
